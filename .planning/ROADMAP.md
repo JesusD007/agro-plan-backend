@@ -51,10 +51,10 @@ Plans:
   2. Cost and harvest reports use recorded units and source data, and a harvest is blocked or flagged until an input's documented withholding period has elapsed.
   3. A producer can view a crop calendar and reference prices, and receive climate or stage-related advisories with their source and validity.
   4. A producer can grant an advisor explicit, scoped, time-bound access and revoke it; the advisor can only access authorized farm data and reports.
-**Plans**: 2/8 plans executed
+**Plans**: 3/8 plans executed
 - [x] 02-01-PLAN.md
 - [x] 02-02-PLAN.md
-- [ ] 02-03-PLAN.md
+- [x] 02-03-PLAN.md
 - [ ] 02-04-PLAN.md
 - [ ] 02-05-PLAN.md
 - [ ] 02-06-PLAN.md
@@ -111,7 +111,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Farm Planning Pilot | 12/12 | Complete    | 2026-11-10 |
-| 2. Farm Operations and Safety | 2/8 | In Progress | - |
+| 2. Farm Operations and Safety | 3/8 | In Progress | - |
 | 3. Workforce and Offline Operations | 0/TBD | Not started | - |
 | 4. Applied Farm Intelligence | 0/TBD | Not started | - |
 | 5. Marketplace and Traceability | 0/TBD | Not started | - |
