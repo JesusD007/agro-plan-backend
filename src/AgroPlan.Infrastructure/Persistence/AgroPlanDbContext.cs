@@ -44,6 +44,7 @@ public sealed class AgroPlanDbContext(DbContextOptions<AgroPlanDbContext> option
     public DbSet<CropCalendarTemplate> CropCalendarTemplates => Set<CropCalendarTemplate>();
     public DbSet<AdvisorAccessGrant> AdvisorAccessGrants => Set<AdvisorAccessGrant>();
     public DbSet<WorkerInvitation> WorkerInvitations => Set<WorkerInvitation>();
+    public DbSet<WorkTask> WorkTasks => Set<WorkTask>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

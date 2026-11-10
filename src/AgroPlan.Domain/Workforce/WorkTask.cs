@@ -70,6 +70,14 @@ public sealed class WorkTask
         Status = WorkTaskStatus.InProgress;
     }
 
+    public void Reassign(string workerUserId)
+    {
+        RequireStatus(WorkTaskStatus.Pending);
+        if (string.IsNullOrWhiteSpace(workerUserId) || workerUserId.Length > 450)
+            throw new ArgumentException("An assigned worker is required.", nameof(workerUserId));
+        AssignedWorkerUserId = workerUserId.Trim();
+    }
+
     public void Submit(DateTimeOffset submittedAt)
     {
         if (submittedAt == default) throw new ArgumentException("Submission time is required.", nameof(submittedAt));
