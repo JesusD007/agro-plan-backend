@@ -51,6 +51,7 @@ public sealed class HarvestRecordsController(AgroPlanDbContext db) : ControllerB
             request.HarvestedAt, request.Quantity, request.Unit, actor, DateTimeOffset.UtcNow,
             JsonSerializer.Serialize(assessment.Evidence));
         db.HarvestEntries.Add(entry);
+        ConfirmedRecordOutbox.Add(db, farmId, entry.ParcelId, entry.CropCycleId, "harvest", entry.Id, entry.HarvestedAt);
         await db.SaveChangesAsync(ct);
         return CreatedAtAction(nameof(List), new { farmId }, ToResponse(entry));
     }
@@ -70,6 +71,7 @@ public sealed class HarvestRecordsController(AgroPlanDbContext db) : ControllerB
             JsonSerializer.Serialize(assessment.Evidence), original.Id, request.Reason); }
         catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
         db.HarvestEntries.Add(correction);
+        ConfirmedRecordOutbox.Add(db, farmId, correction.ParcelId, correction.CropCycleId, "harvest", correction.Id, correction.HarvestedAt, 2);
         await db.SaveChangesAsync(ct);
         return CreatedAtAction(nameof(List), new { farmId }, ToResponse(correction));
     }

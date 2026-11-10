@@ -38,6 +38,7 @@ public sealed class IrrigationEntriesController(AgroPlanDbContext db) : Controll
                 .AnyAsync(x => x.FarmId == farmId && x.ParcelId == entry.ParcelId && x.Id == entry.CropCycleId, ct))
             return BadRequest(new { message = "The crop cycle does not belong to this farm and parcel." });
         db.IrrigationEntries.Add(entry);
+        ConfirmedRecordOutbox.Add(db, farmId, entry.ParcelId, entry.CropCycleId, "irrigation", entry.Id, entry.OccurredAt);
         await db.SaveChangesAsync(ct);
         return CreatedAtAction(nameof(List), new { farmId }, ToResponse(entry));
     }
@@ -55,6 +56,7 @@ public sealed class IrrigationEntriesController(AgroPlanDbContext db) : Controll
             request.Method.Value, request.WaterSource, request.OccurredAt, actor, DateTimeOffset.UtcNow, original.Id, request.Reason); }
         catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
         db.IrrigationEntries.Add(correction);
+        ConfirmedRecordOutbox.Add(db, farmId, correction.ParcelId, correction.CropCycleId, "irrigation", correction.Id, correction.OccurredAt, 2);
         await db.SaveChangesAsync(ct);
         return CreatedAtAction(nameof(List), new { farmId }, ToResponse(correction));
     }

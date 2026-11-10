@@ -47,6 +47,7 @@ public sealed class InputApplicationsController(AgroPlanDbContext db) : Controll
             x.CropId == entry.CropId && x.IntendedUseId == entry.IntendedUseId && x.Jurisdiction == Jurisdiction).ToListAsync(ct);
         var assessment = ApplicationFrequencyEvaluator.Assess(entry, matchingRows, matchingRules, DateTimeOffset.UtcNow);
         db.InputApplicationEntries.Add(entry);
+        ConfirmedRecordOutbox.Add(db, farmId, entry.ParcelId, entry.CropCycleId, "input-application", entry.Id, entry.AppliedAt);
         await db.SaveChangesAsync(ct);
         return CreatedAtAction(nameof(List), new { farmId }, ToResponse(entry, assessment));
     }
@@ -74,6 +75,7 @@ public sealed class InputApplicationsController(AgroPlanDbContext db) : Controll
             x.CropId == correction.CropId && x.IntendedUseId == correction.IntendedUseId && x.Jurisdiction == Jurisdiction).ToListAsync(ct);
         var assessment = ApplicationFrequencyEvaluator.Assess(correction, matchingRows, matchingRules, DateTimeOffset.UtcNow);
         db.InputApplicationEntries.Add(correction);
+        ConfirmedRecordOutbox.Add(db, farmId, correction.ParcelId, correction.CropCycleId, "input-application", correction.Id, correction.AppliedAt, 2);
         await db.SaveChangesAsync(ct);
         return CreatedAtAction(nameof(List), new { farmId }, ToResponse(correction, assessment));
     }

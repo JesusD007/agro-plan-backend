@@ -54,6 +54,7 @@ public sealed class AgroPlanDbContext(DbContextOptions<AgroPlanDbContext> option
     public DbSet<FarmWorkerSettings> FarmWorkerSettings => Set<FarmWorkerSettings>();
     public DbSet<VerifiedWorkReward> VerifiedWorkRewards => Set<VerifiedWorkReward>();
     public DbSet<WorkRoute> WorkRoutes => Set<WorkRoute>();
+    public DbSet<TaskScheduleRevision> TaskScheduleRevisions => Set<TaskScheduleRevision>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

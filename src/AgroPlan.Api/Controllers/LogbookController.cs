@@ -38,6 +38,8 @@ public sealed class LogbookController(AgroPlanDbContext db) : ControllerBase
         if (entry.CropCycleId.HasValue && !await db.CropCycles.AsNoTracking().AnyAsync(x => x.FarmId == farmId && x.ParcelId == entry.ParcelId && x.Id == entry.CropCycleId, ct))
             return BadRequest(new { message = "The crop cycle does not belong to this farm and parcel." });
         db.LogbookEntries.Add(entry);
+        ConfirmedRecordOutbox.Add(db, farmId, entry.ParcelId, entry.CropCycleId,
+            entry.ActivityType.ToString().ToLowerInvariant(), entry.Id, entry.OccurredAt);
         await db.SaveChangesAsync(ct);
         return CreatedAtAction(nameof(List), new { farmId }, ToResponse(entry));
     }
@@ -53,6 +55,8 @@ public sealed class LogbookController(AgroPlanDbContext db) : ControllerBase
         try { correction = new CorrectLogbookEntry().Create(original, request.Reason, request.OccurredAt, request.Details, actor, DateTimeOffset.UtcNow); }
         catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
         db.LogbookEntries.Add(correction);
+        ConfirmedRecordOutbox.Add(db, farmId, correction.ParcelId, correction.CropCycleId,
+            correction.ActivityType.ToString().ToLowerInvariant(), correction.Id, correction.OccurredAt, 2);
         await db.SaveChangesAsync(ct);
         return CreatedAtAction(nameof(List), new { farmId }, ToResponse(correction));
     }
