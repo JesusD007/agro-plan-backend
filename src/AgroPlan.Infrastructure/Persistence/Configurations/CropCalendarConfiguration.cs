@@ -49,6 +49,8 @@ public sealed class ScheduleChangeProposalConfiguration : IEntityTypeConfigurati
         builder.Property(x => x.ExplanationSchemaVersion).HasMaxLength(80);
         builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(24).IsRequired();
         builder.Property(x => x.FailureCode).HasMaxLength(100);
+        builder.Property(x => x.ProcessingStartedAt);
+        builder.Property(x => x.ProcessingAttempts).IsRequired();
         builder.Ignore(x => x.Deltas);
         builder.Ignore(x => x.EvidenceIds);
         builder.HasIndex(x => new { x.FarmId, x.CropCycleId, x.CreatedAt });

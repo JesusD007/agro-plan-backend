@@ -17,6 +17,8 @@ public sealed class ScheduleChangeProposalConsumer(RabbitMqConnection connection
     IAiProposalProvider provider, ILogger<ScheduleChangeProposalConsumer> logger) : BackgroundService
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly TimeSpan ProcessingLease = TimeSpan.FromMinutes(5);
+    private const int MaxProcessingAttempts = 5;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -34,6 +36,11 @@ public sealed class ScheduleChangeProposalConsumer(RabbitMqConnection connection
                 {
                     try { await HandleAsync(delivery.Body.ToArray(), stoppingToken); await channel.BasicAckAsync(delivery.DeliveryTag, false, stoppingToken); }
                     catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { throw; }
+                    catch (ProcessingLeaseActiveException)
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+                        await channel.BasicNackAsync(delivery.DeliveryTag, false, true, stoppingToken);
+                    }
                     catch (Exception ex) { logger.LogError("Schedule proposal delivery failed ({ExceptionType}); broker will redeliver.", ex.GetType().Name); await channel.BasicNackAsync(delivery.DeliveryTag, false, true, stoppingToken); }
                 };
                 await channel.BasicConsumeAsync(RabbitMqPublisher.ScheduleChangesQueueName, false, consumerTag: "", noLocal: false,
@@ -52,11 +59,30 @@ public sealed class ScheduleChangeProposalConsumer(RabbitMqConnection connection
         await using var scope = scopeFactory.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AgroPlanDbContext>();
         var now = DateTimeOffset.UtcNow;
-        var claimed = await db.ScheduleChangeProposals.Where(x => x.Id == message.ProposalId && x.Version == message.Version &&
-                x.Status == ScheduleChangeProposalStatus.Pending && x.ExpiresAt > now)
-            .ExecuteUpdateAsync(update => update.SetProperty(x => x.Status, ScheduleChangeProposalStatus.Processing)
+        var expiredLease = now - ProcessingLease;
+        await db.ScheduleChangeProposals.Where(x => x.Id == message.ProposalId && x.Version == message.Version &&
+                x.Status == ScheduleChangeProposalStatus.Processing && x.ProcessingStartedAt <= expiredLease &&
+                x.ProcessingAttempts >= MaxProcessingAttempts && x.ExpiresAt > now)
+            .ExecuteUpdateAsync(update => update.SetProperty(x => x.Status, ScheduleChangeProposalStatus.Failed)
+                .SetProperty(x => x.FailureCode, "PROCESSING_ATTEMPTS_EXHAUSTED")
+                .SetProperty(x => x.ProcessingStartedAt, (DateTimeOffset?)null)
                 .SetProperty(x => x.StatusVersion, x => x.StatusVersion + 1), token);
-        if (claimed == 0) return;
+        var claimed = await db.ScheduleChangeProposals.Where(x => x.Id == message.ProposalId && x.Version == message.Version &&
+                x.ExpiresAt > now && x.ProcessingAttempts < MaxProcessingAttempts &&
+                (x.Status == ScheduleChangeProposalStatus.Pending ||
+                 (x.Status == ScheduleChangeProposalStatus.Processing && x.ProcessingStartedAt <= expiredLease)))
+            .ExecuteUpdateAsync(update => update.SetProperty(x => x.Status, ScheduleChangeProposalStatus.Processing)
+                .SetProperty(x => x.ProcessingStartedAt, now)
+                .SetProperty(x => x.ProcessingAttempts, x => x.ProcessingAttempts + 1)
+                .SetProperty(x => x.StatusVersion, x => x.StatusVersion + 1), token);
+        if (claimed == 0)
+        {
+            var current = await db.ScheduleChangeProposals.AsNoTracking()
+                .SingleOrDefaultAsync(x => x.Id == message.ProposalId && x.Version == message.Version, token);
+            if (current?.Status == ScheduleChangeProposalStatus.Processing && current.ProcessingStartedAt > expiredLease)
+                throw new ProcessingLeaseActiveException();
+            return;
+        }
         var proposal = await db.ScheduleChangeProposals.SingleAsync(x => x.Id == message.ProposalId, token);
         try
         {
@@ -86,4 +112,6 @@ public sealed class ScheduleChangeProposalConsumer(RabbitMqConnection connection
             logger.LogWarning("Schedule explanation failed safely ({ExceptionType}).", ex.GetType().Name);
         }
     }
+
+    private sealed class ProcessingLeaseActiveException : Exception { }
 }

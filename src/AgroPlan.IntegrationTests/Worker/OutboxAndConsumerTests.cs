@@ -65,6 +65,10 @@ public sealed class OutboxAndConsumerTests(PostgreSqlRabbitFixture services)
         {
             var db = scope.ServiceProvider.GetRequiredService<AgroPlanDbContext>();
             eventJson = await db.OutboxMessages.Where(x => x.AggregateId == proposalId).Select(x => x.PayloadJson).SingleAsync();
+            await db.ScheduleChangeProposals.Where(x => x.Id == proposalId).ExecuteUpdateAsync(update => update
+                .SetProperty(x => x.Status, ScheduleChangeProposalStatus.Processing)
+                .SetProperty(x => x.ProcessingStartedAt, DateTimeOffset.UtcNow.AddMinutes(-6))
+                .SetProperty(x => x.ProcessingAttempts, 1));
         }
         await PublishScheduleDuplicateAsync(services.RabbitMqUrl, eventJson);
         await PublishScheduleDuplicateAsync(services.RabbitMqUrl, eventJson);

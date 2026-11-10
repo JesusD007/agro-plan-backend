@@ -42,19 +42,25 @@ public sealed class ScheduleChangeProposal
     public DateTimeOffset ExpiresAt { get; private set; }
     public DateTimeOffset? ConfirmedAt { get; private set; }
     public string? ConfirmedBy { get; private set; }
+    public DateTimeOffset? ProcessingStartedAt { get; private set; }
+    public int ProcessingAttempts { get; private set; }
     public int StatusVersion { get; private set; } = 1;
     public IReadOnlyList<ScheduleTaskDelta> Deltas => JsonSerializer.Deserialize<ScheduleTaskDelta[]>(DeltasJson) ?? [];
     public IReadOnlyList<string> EvidenceIds => JsonSerializer.Deserialize<string[]>(EvidenceIdsJson) ?? [];
 
-    public bool TryClaim(DateTimeOffset now) { if (Status != ScheduleChangeProposalStatus.Pending || ExpiresAt <= now) return false; Status = ScheduleChangeProposalStatus.Processing; StatusVersion++; return true; }
+    public bool TryClaim(DateTimeOffset now)
+    {
+        if (Status != ScheduleChangeProposalStatus.Pending || ExpiresAt <= now) return false;
+        Status = ScheduleChangeProposalStatus.Processing; ProcessingStartedAt = now; ProcessingAttempts++; StatusVersion++; return true;
+    }
     public void SetExplanation(CalendarExplanationDraft draft, DateTimeOffset now)
     {
         if (Status != ScheduleChangeProposalStatus.Processing || ExpiresAt <= now) throw new InvalidOperationException("Proposal is no longer current.");
         ExplanationJson = JsonSerializer.Serialize(draft); ExplanationProvider = draft.Provider; ExplanationModel = draft.Model;
         ExplanationPromptVersion = draft.PromptVersion; ExplanationSchemaVersion = draft.SchemaVersion;
-        Status = ScheduleChangeProposalStatus.Explained; StatusVersion++;
+        Status = ScheduleChangeProposalStatus.Explained; ProcessingStartedAt = null; StatusVersion++;
     }
-    public void Fail(string code) { if (Status is ScheduleChangeProposalStatus.Confirmed or ScheduleChangeProposalStatus.Rejected) return; FailureCode = code; Status = ScheduleChangeProposalStatus.Failed; StatusVersion++; }
+    public void Fail(string code) { if (Status is ScheduleChangeProposalStatus.Confirmed or ScheduleChangeProposalStatus.Rejected) return; FailureCode = code; Status = ScheduleChangeProposalStatus.Failed; ProcessingStartedAt = null; StatusVersion++; }
     public bool Confirm(int version, string evidenceVersion, string producerId, DateTimeOffset now)
     {
         if (Status != ScheduleChangeProposalStatus.Explained || version != Version || evidenceVersion != EvidenceVersion || ExpiresAt <= now || string.IsNullOrWhiteSpace(producerId)) return false;
