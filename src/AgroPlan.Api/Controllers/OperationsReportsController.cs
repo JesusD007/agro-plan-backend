@@ -48,12 +48,12 @@ public sealed class OperationsReportsController(AgroPlanDbContext db) : Controll
         if (from.HasValue && to.HasValue && to < from) return BadRequest(new { message = "End date must not precede start date." });
         if (cropCycleId.HasValue && !await db.CropCycles.AsNoTracking().AnyAsync(x => x.FarmId == farmId && x.Id == cropCycleId, ct))
             return NotFound();
-        var query = db.ExpenseEntries.AsNoTracking().Where(x => x.FarmId == farmId);
-        if (cropCycleId.HasValue) query = query.Where(x => x.CropCycleId == cropCycleId);
-        if (from.HasValue) query = query.Where(x => x.OccurredAt >= from);
-        if (to.HasValue) query = query.Where(x => x.OccurredAt <= to);
-        var rows = await query.OrderBy(x => x.OccurredAt).ToListAsync(ct);
-        var correctedIds = rows.Where(x => x.CorrectsEntryId.HasValue).Select(x => x.CorrectsEntryId!.Value).ToHashSet();
+        var allRowsQuery = db.ExpenseEntries.AsNoTracking().Where(x => x.FarmId == farmId);
+        if (cropCycleId.HasValue) allRowsQuery = allRowsQuery.Where(x => x.CropCycleId == cropCycleId);
+        var allRows = await allRowsQuery.ToListAsync(ct);
+        var correctedIds = allRows.Where(x => x.CorrectsEntryId.HasValue).Select(x => x.CorrectsEntryId!.Value).ToHashSet();
+        var rows = allRows.Where(x => (!from.HasValue || x.OccurredAt >= from) && (!to.HasValue || x.OccurredAt <= to))
+            .OrderBy(x => x.OccurredAt).ToArray();
         var data = new List<IEnumerable<string?>>
         {
             new string?[] { "entry_id", "corrects_entry_id", "active", "occurred_at", "category", "description", "amount", "currency", "quantity", "unit" }

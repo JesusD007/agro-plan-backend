@@ -34,12 +34,12 @@ public sealed class AdvisorReportsController(AgroPlanDbContext db, IAuthorizatio
     {
         if (!await Allowed(farmId, AdvisorReportScope.Costs)) return Forbid();
         if (from.HasValue && to.HasValue && to < from) return BadRequest(new { message = "End date must not precede start date." });
-        var query = db.ExpenseEntries.AsNoTracking().Where(x => x.FarmId == farmId);
-        if (cropCycleId.HasValue) query = query.Where(x => x.CropCycleId == cropCycleId);
-        if (from.HasValue) query = query.Where(x => x.OccurredAt >= from);
-        if (to.HasValue) query = query.Where(x => x.OccurredAt <= to);
-        var rows = await query.OrderBy(x => x.OccurredAt).ToListAsync(ct);
-        var corrected = rows.Where(x => x.CorrectsEntryId.HasValue).Select(x => x.CorrectsEntryId!.Value).ToHashSet();
+        var allRowsQuery = db.ExpenseEntries.AsNoTracking().Where(x => x.FarmId == farmId);
+        if (cropCycleId.HasValue) allRowsQuery = allRowsQuery.Where(x => x.CropCycleId == cropCycleId);
+        var allRows = await allRowsQuery.ToListAsync(ct);
+        var corrected = allRows.Where(x => x.CorrectsEntryId.HasValue).Select(x => x.CorrectsEntryId!.Value).ToHashSet();
+        var rows = allRows.Where(x => (!from.HasValue || x.OccurredAt >= from) && (!to.HasValue || x.OccurredAt <= to))
+            .OrderBy(x => x.OccurredAt).ToArray();
         var data = new List<IEnumerable<string?>> { new string?[] { "entry_id", "active", "occurred_at", "category", "amount", "currency", "quantity", "unit" } };
         data.AddRange(rows.Select(x => (IEnumerable<string?>)new string?[] { x.Id.ToString(), (!corrected.Contains(x.Id)).ToString().ToLowerInvariant(),
             x.OccurredAt.ToString("O"), x.Category.ToString(), CsvReportWriter.Format(x.Amount), x.CurrencyCode,
