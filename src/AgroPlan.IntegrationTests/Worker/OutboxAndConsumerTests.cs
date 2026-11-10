@@ -82,6 +82,11 @@ public sealed class OutboxAndConsumerTests(PostgreSqlRabbitFixture services)
             Assert.Equal(1, provider.CalendarCalls);
             using var confirm = await client.PostAsJsonAsync($"/api/farms/{farmId}/crop-cycles/{cycleId}/schedule-change-proposals/{proposalId}/confirm", new { version = 1 });
             Assert.Equal(HttpStatusCode.OK, confirm.StatusCode);
+            await using var finalScope = factory.Services.CreateAsyncScope();
+            var finalDb = finalScope.ServiceProvider.GetRequiredService<AgroPlanDbContext>();
+            var schedule = await finalDb.CalendarScheduleItems.SingleAsync(x => x.FarmId == farmId && x.CropCycleId == cycleId && x.TaskKey == "irrigation-check");
+            Assert.Equal(DateOnly.FromDateTime(DateTime.UtcNow.AddDays(2)), schedule.DueDate);
+            Assert.Equal(proposalId, schedule.LastProposalId);
         }
         finally { await worker.StopAsync(); }
     }

@@ -39,9 +39,15 @@ public sealed class ScheduleChangeProposalsController(AgroPlanDbContext db, IFar
         if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
 
         // Initial schedule deltas are computed exclusively from the validated template and confirmed planting record.
+        var currentSchedule = await db.CalendarScheduleItems.AsNoTracking().Where(x => x.FarmId == farmId && x.CropCycleId == cropCycleId)
+            .ToDictionaryAsync(x => x.TaskKey, ct);
         var deltas = template.Tasks.Where(x => x.CompletionEvidence != CropCalendarOperationKind.Harvest)
-            .OrderBy(x => x.Order).Select(x => new ScheduleTaskDelta(x.Key, null,
-                DateOnly.FromDateTime(sowing.OccurredAt.UtcDateTime).AddDays(x.DaysAfterPlanting), [template.Id.ToString("N")])).ToArray();
+            .OrderBy(x => x.Order).Select(x =>
+            {
+                var proposedDate = DateOnly.FromDateTime(sowing.OccurredAt.UtcDateTime).AddDays(x.DaysAfterPlanting);
+                currentSchedule.TryGetValue(x.Key, out var current);
+                return current?.DueDate == proposedDate ? null : new ScheduleTaskDelta(x.Key, current?.DueDate, proposedDate, [template.Id.ToString("N")]);
+            }).Where(x => x is not null).Select(x => x!).ToArray();
         if (deltas.Length == 0) return Conflict(new { status = "unavailable", missingInputs = new[] { "deterministic_schedule_delta" } });
         var evidenceVersion = $"{template.Version}:{template.SourceVersion}:{template.EffectiveFrom:O}:{template.EffectiveUntil:O}";
         var proposal = new ScheduleChangeProposal(Guid.NewGuid(), farmId, cropCycleId, 1, evidenceVersion, deltas,
@@ -77,12 +83,35 @@ public sealed class ScheduleChangeProposalsController(AgroPlanDbContext db, IFar
         if (templates.Count != 1) return Conflict(new { code = "EVIDENCE_STALE" });
         var currentEvidence = $"{templates[0].Version}:{templates[0].SourceVersion}:{templates[0].EffectiveFrom:O}:{templates[0].EffectiveUntil:O}";
         var sowingRows = await db.LogbookEntries.AsNoTracking().Where(x => x.FarmId == farmId && x.CropCycleId == cropCycleId && x.ActivityType == LogbookActivityType.Sowing)
-            .Select(x => new { x.Id, x.CorrectsEntryId }).ToListAsync(ct);
+            .Select(x => new { x.Id, x.CorrectsEntryId, x.OccurredAt }).ToListAsync(ct);
         var corrected = sowingRows.Where(x => x.CorrectsEntryId.HasValue).Select(x => x.CorrectsEntryId!.Value).ToHashSet();
         var activeSowingIds = sowingRows.Where(x => !corrected.Contains(x.Id)).Select(x => x.Id.ToString("N"));
         if (!activeSowingIds.Any(id => p.EvidenceIds.Contains(id, StringComparer.Ordinal))) return Conflict(new { code = "PLANTING_EVIDENCE_STALE" });
         if (!p.Confirm(request.Version, currentEvidence, user, now)) return Conflict(new { code = "PROPOSAL_STALE_OR_NOT_READY" });
+        var activeSowing = sowingRows.Where(x => !corrected.Contains(x.Id)).OrderBy(x => x.OccurredAt).FirstOrDefault();
+        if (activeSowing is null) return Conflict(new { code = "PLANTING_EVIDENCE_STALE" });
+        var sowingAt = activeSowing.OccurredAt;
+        var templateTasks = templates[0].Tasks.ToDictionary(x => x.Key, StringComparer.Ordinal);
+        foreach (var delta in p.Deltas)
+        {
+            if (!templateTasks.TryGetValue(delta.TaskKey, out var task) || task.CompletionEvidence == CropCalendarOperationKind.Harvest ||
+                DateOnly.FromDateTime(sowingAt.UtcDateTime).AddDays(task.DaysAfterPlanting) != delta.ProposedDate)
+                return Conflict(new { code = "DETERMINISTIC_DELTA_STALE" });
+        }
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        foreach (var delta in p.Deltas)
+        {
+            var item = await db.CalendarScheduleItems.SingleOrDefaultAsync(x => x.FarmId == farmId && x.CropCycleId == cropCycleId && x.TaskKey == delta.TaskKey, ct);
+            if (item is null)
+            {
+                item = new CalendarScheduleItem(farmId, cropCycleId, delta.TaskKey, delta.ProposedDate, now);
+                item.Apply(p.Id, delta.ProposedDate, now);
+                db.CalendarScheduleItems.Add(item);
+            }
+            else item.Apply(p.Id, delta.ProposedDate, now);
+        }
         await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
         return Ok(ToResponse(p));
     }
 

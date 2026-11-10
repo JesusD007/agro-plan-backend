@@ -65,3 +65,24 @@ public sealed class ScheduleChangeProposal
 public sealed record ScheduleTaskDelta(string TaskKey, DateOnly? PreviousDate, DateOnly ProposedDate, IReadOnlyList<string> EvidenceIds);
 public sealed record CalendarExplanationInput(int ProposalVersion, string EvidenceVersion, IReadOnlyList<ScheduleTaskDelta> Deltas, IReadOnlyList<string> AllowedEvidenceIds);
 public sealed record CalendarExplanationDraft(string Summary, IReadOnlyList<string> SourceIds, string Provider, string Model, string PromptVersion, string SchemaVersion, DateTimeOffset GeneratedAt);
+
+public sealed class CalendarScheduleItem
+{
+    private CalendarScheduleItem() { }
+    public CalendarScheduleItem(Guid farmId, Guid cropCycleId, string taskKey, DateOnly dueDate, DateTimeOffset updatedAt)
+    {
+        if (farmId == Guid.Empty || cropCycleId == Guid.Empty || string.IsNullOrWhiteSpace(taskKey)) throw new ArgumentException("Farm, cycle and task are required.");
+        FarmId = farmId; CropCycleId = cropCycleId; TaskKey = taskKey.Trim(); DueDate = dueDate; UpdatedAt = updatedAt;
+    }
+    public Guid FarmId { get; private set; }
+    public Guid CropCycleId { get; private set; }
+    public string TaskKey { get; private set; } = "";
+    public DateOnly DueDate { get; private set; }
+    public Guid? LastProposalId { get; private set; }
+    public DateTimeOffset UpdatedAt { get; private set; }
+    public void Apply(Guid proposalId, DateOnly dueDate, DateTimeOffset now)
+    {
+        if (proposalId == Guid.Empty) throw new ArgumentException("Proposal id is required.", nameof(proposalId));
+        DueDate = dueDate; LastProposalId = proposalId; UpdatedAt = now;
+    }
+}

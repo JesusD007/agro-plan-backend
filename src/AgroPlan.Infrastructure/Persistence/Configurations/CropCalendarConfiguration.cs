@@ -55,3 +55,17 @@ public sealed class ScheduleChangeProposalConfiguration : IEntityTypeConfigurati
         builder.HasIndex(x => new { x.Status, x.ExpiresAt });
     }
 }
+
+public sealed class CalendarScheduleItemConfiguration : IEntityTypeConfiguration<CalendarScheduleItem>
+{
+    public void Configure(EntityTypeBuilder<CalendarScheduleItem> builder)
+    {
+        builder.ToTable("calendar_schedule_items", "agro");
+        builder.HasKey(x => new { x.FarmId, x.CropCycleId, x.TaskKey });
+        builder.Property(x => x.TaskKey).HasMaxLength(120).IsRequired();
+        builder.HasOne<AgroPlan.Domain.Crops.CropCycle>().WithMany().HasForeignKey(x => new { x.FarmId, x.CropCycleId })
+            .HasPrincipalKey(x => new { x.FarmId, x.Id }).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<ScheduleChangeProposal>().WithMany().HasForeignKey(x => new { x.FarmId, x.LastProposalId })
+            .HasPrincipalKey(x => new { x.FarmId, x.Id }).OnDelete(DeleteBehavior.Restrict);
+    }
+}

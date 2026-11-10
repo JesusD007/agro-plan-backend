@@ -72,7 +72,10 @@ public sealed class CropCalendarsController(AgroPlanDbContext db) : ControllerBa
 
         var result = CropCalendarEvaluator.Evaluate(cycle.CropCatalogEntryId, planting, template, progress, now,
             cycle.CropCatalogEntry.Region);
-        return Ok(result);
+        var confirmedSchedule = await db.CalendarScheduleItems.AsNoTracking().Where(item => item.FarmId == farmId && item.CropCycleId == cropCycleId)
+            .ToDictionaryAsync(item => item.TaskKey, item => item.DueDate, cancellationToken);
+        return Ok(result with { Tasks = result.Tasks.Select(task => confirmedSchedule.TryGetValue(task.Key, out var dueDate)
+            ? task with { DueDate = dueDate } : task).ToArray() });
     }
 
     private static IReadOnlyList<T> Active<T>(IReadOnlyCollection<T> source, Func<T, Guid> id, Func<T, Guid?> corrects)
