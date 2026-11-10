@@ -15,7 +15,7 @@ Deliver the six confirmed pilot capabilities through the backend: account creati
 
 ### Authentication and farm authorization
 - **D-01:** Use ASP.NET Core Identity for accounts. For every farm-scoped request, validate the user's current active farm membership in the database; do not treat farm-role claims in an access token as sufficient authorization.
-- **D-02:** Keep the documented support-mediated recovery flow: a code is sent to the account email, support reviews the request, and an approved user receives a temporary password-change mechanism. Support never sees the user's password. Code lifetime, attempt limits, and session revocation policy remain to be specified during planning.
+- **D-02:** Keep the documented support-mediated recovery flow: a code is sent to the account email, support reviews the request, and an approved user receives a temporary password-change mechanism. Support never sees the user's password. Planning policy: random one-time code stored hashed, 15-minute lifetime, five attempts, three recovery requests per account and ten per source IP per hour; authenticated audited support review; one-time password-change token expires in 15 minutes; revoke all refresh sessions after recovery.
 - **D-03:** The pilot activates owner and farm-administrator workflows. Worker and advisor access remain deferred with their roadmap phases.
 
 ### AI and climate integration
@@ -30,7 +30,7 @@ Deliver the six confirmed pilot capabilities through the backend: account creati
 
 ### Manual logbook and files
 - **D-10:** Treat logbook entries as immutable. A correction is a new operation linked to the entry it corrects, preserving the original and its history.
-- **D-11:** Support optional photos for logbook activities using the documented direct-to-Supabase-Storage flow with time-limited authorization issued by the API. Store metadata and references in PostgreSQL; never place binary content in RabbitMQ messages.
+- **D-11:** Support optional photos for logbook activities using the documented direct-to-Supabase-Storage flow with time-limited authorization issued by the API. Accept JPEG/PNG/WebP up to 10 MiB; uploads expire after ten minutes and abandoned objects are removed after 24 hours. Store metadata and references in PostgreSQL; never place binary content in RabbitMQ messages.
 - **D-12:** PostgreSQL remains the source of truth. Background work uses the API/Worker, RabbitMQ, an outbox, idempotent processing, and SignalR notifications as specified by the adopted architecture.
 
 ### the agent's Discretion

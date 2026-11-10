@@ -19,7 +19,7 @@ created: "2026-11-09"
 |----------|-------|
 | **Framework** | None selected; automated tests are outside this task's scope. |
 | **Config file** | None. |
-| **Quick run command** | `dotnet build AgroPlan.sln` after the solution exists. Build only; do not run test commands. |
+| **Quick run command** | `dotnet build src/AgroPlan.sln` after .NET SDK 10 is installed and the solution exists. Build only; do not run test commands. |
 | **Full suite command** | Not applicable. |
 | **Estimated runtime** | Unknown until the solution exists. |
 
@@ -70,3 +70,5 @@ Behavioral verification is not authorized in this task. The plan may describe ac
 - [ ] `nyquist_compliant: true` set in frontmatter.
 
 **Approval:** pending
+
+

@@ -4,56 +4,56 @@ Prepared during planning for `01-farm-planning-pilot`. Every external API/servic
 
 ## Integration Coverage
 
-| Capability / external boundary | Decision | Plan | Coverage rationale and required behavior |
-|---|---|---|---|
-| Supabase PostgreSQL | INTEGRATE | 01-01 through 01-05 | Authoritative Identity/domain/job/outbox/audit persistence; tenant-aware relationships and transactions. |
-| Supabase Storage | INTEGRATE | 01-05 | Private optional logbook photos; API verifies current membership, issues expiring upload authorization, and stores metadata/reference in PostgreSQL. No binary in RabbitMQ. |
-| CloudAMQP RabbitMQ | INTEGRATE | 01-03, 01-04 | Durable asynchronous proposal jobs via PostgreSQL outbox, publisher confirms, stable identifiers and idempotent Worker processing. |
-| Gemini API / Google AI Studio | INTEGRATE | 01-03, 01-04 | Official `Google.GenAI` C# SDK in Worker; server-side key, configurable model, structured output validation, bounded retries/timeouts, draft-only lifecycle. Verify official docs, NuGet provenance and .NET 10 compatibility before pinning. |
-| Climate data API | OPT OUT of live provider; INTEGRATE provider contract | 01-03 | Provider source is unselected. Implement contract and explicit unavailable response with no fabricated climate values. Choose and validate a source before production activation. |
-| Email delivery for account recovery | INTEGRATE contract and configurable adapter; provider selection required before production | 01-01 | Send expiring one-time recovery code to account email and support review status. Never log the code/password or allow support to see/set password. Configure delivery through server-side settings; no live provider chosen or provisioned here. |
-| SignalR | INTEGRATE | 01-03 | Transient job status notifications only; clients retrieve authoritative state from API/PostgreSQL. Recheck farm membership for hub group access/operations. |
-| Render services | CONFIGURE deployment artifacts only; no deployment | 01-01 | Separate API and Worker Docker entry points suitable for separate Render services. No account setup, service creation, or deployment in planning scope. |
-| Identity API bearer token format | OPT OUT | 01-01 | Built-in API token format is proprietary and not JWT/OIDC. Use Identity for credential lifecycle with first-party short-lived signed JWT access tokens and hashed, rotating opaque refresh tokens. |
-| Client UI, mobile UI, voice, offline sync | OPT OUT | — | Backend API contracts are in pilot scope; client visual/interface work and offline/voice features belong to other repos or later roadmap phases. |
-| Worker/advisor membership and permissions | OPT OUT | — | Pilot activates owner/farm administrator only. Worker and advisor flows are mapped to later phases. |
-| Marketplace, buyers, transport, rentals, pricing integrations | OPT OUT | — | These capabilities are assigned to later roadmap phases and are outside the six-capability pilot. |
-| Automated test providers/frameworks | OPT OUT | — | User-authorized planning scope prohibits adding or running test files/commands. Future compile-only command is `dotnet build src/AgroPlan.sln`; manual acceptance scenarios remain unexecuted. |
+| capability | decision | reason |
+|---|---|---|
+| Supabase PostgreSQL | INTEGRATE | Authoritative Identity, domain, job, outbox and audit persistence with tenant-aware relations and transactions. Plans 01-01 through 01-08. |
+| Supabase Storage | INTEGRATE | Private optional logbook photos; API checks live membership, issues short-lived upload authorization, and stores metadata only. Plan 01-08. |
+| CloudAMQP RabbitMQ | INTEGRATE | Durable jobs via PostgreSQL outbox, publisher confirms and idempotent Worker. Plan 01-08. |
+| Gemini API via Google AI Studio | INTEGRATE | Google.GenAI Worker adapter, server key, configurable model, schema-checked drafts. Verify package and .NET 10 compatibility before pinning. Plan 01-06. |
+| Climate data API | OPT-OUT | D-05 leaves the source unselected. Pilot reports climate as unavailable; validate a source before enabling it in production. Plan 01-06. |
+| Email delivery for recovery | INTEGRATE | Implement IEmailSender adapter and expiring one-time recovery flow; choose and configure a delivery service before production activation. Plan 01-02. |
+| SignalR | INTEGRATE | Transient job status notifications only; API/PostgreSQL hold authoritative state and hub access rechecks current membership. Plan 01-08. |
+| Render deployment | OPT-OUT | No account/service provisioning or deployment is included; Docker entry points remain deployable by the separately authorized operator. Plan 01-01. |
+| Third-party OIDC identity provider | OPT-OUT | Pilot uses first-party ASP.NET Core Identity credentials and signed API JWTs for first-party clients; no third-party identity federation requirement exists. Plans 01-01 and 01-02. |
+| Client UI, voice, offline sync | OPT-OUT | This is a backend API phase; visual interfaces, voice and offline sync are assigned to other repos or later phases. |
+| Worker/advisor roles | OPT-OUT | Pilot activates owner and farm administrator only; worker and advisor workflows belong to later roadmap phases. |
+| Marketplace, buyer, transport, rental and pricing integrations | OPT-OUT | These capabilities are assigned to later roadmap phases. |
+| Automated test frameworks/providers | OPT-OUT | User-authorized scope prohibits adding or running tests; compile-only `dotnet build src/AgroPlan.sln` is the planned automated check after .NET SDK 10 is available. |
 
 ## Source Coverage Audit
 
 | Source | ID | Feature or decision | Plan | Status | Notes |
 |---|---|---|---|---|---|
-| GOAL | — | Producer manages core farm data, reviews planting assistance, and keeps manual logbook | 01-01–01-05 | COVERED | End-to-end backend API capabilities, no client UI. |
-| REQ | REQ-pilot-accounts | Account creation, management, mediated recovery | 01-01 | COVERED | Identity + token/session lifecycle + support-reviewed email code. |
-| REQ | REQ-pilot-farms-parcels | Farm and parcel management | 01-01 | COVERED | Request-time membership and tenant-safe relations. |
-| REQ | REQ-pilot-crop-cycle | Crop selection and cycle | 01-02 | COVERED | Five-crop catalog and parcel-linked cycle. |
-| REQ | REQ-pilot-sowing-plan | AI sowing proposal and climate review | 01-03 | COVERED | Async draft, climate contract, explicit missing/unavailable state and approval. |
-| REQ | REQ-pilot-planting-frame | AI-assisted planting frame | 01-04 | COVERED | Deterministic validated capacity plus explanatory draft and confirmation. |
-| REQ | REQ-pilot-manual-logbook | Manual logbook | 01-05 | COVERED | Immutable linked corrections, optional photos. |
-| REQ | REQ-rf-g-01 | Farm/parcel name, location, area, crop | 01-01, 01-02 | COVERED | Farm/parcel and crop-cycle attributes. |
-| REQ | REQ-rf-g-05 | Daily activity log and optional photos | 01-05 | COVERED | Activity types and private storage flow. |
-| REQ | REQ-rf-g-10 | Sowing factors, missing data, scenarios, uncertainty, validity | 01-03 | COVERED | Proposal retains source/freshness/input/model metadata; no fabricated weather or parameters. |
-| REQ | REQ-rf-g-11 | Capacity from usable area/aisles/validated distances; producer selects | 01-04 | COVERED | Deterministic math and explicit confirmation; missing-input path. |
-| REQ | REQ-rf-g-38 | Crop catalog with framework, stages, cycle length, typical dates | 01-02, 01-04 | COVERED | Include only source-validated values; expose missing fields for unsupported crop data. |
-| RESEARCH | — | .NET 10 LTS; compatible EF Core/Npgsql; no NuGet pin before verification | 01-01–01-05 | COVERED | Build targets net10.0; package verification required at pin time. |
-| RESEARCH | — | Identity API tokens are proprietary, not JWT/OIDC | 01-01 | COVERED | Explicit first-party JWT/opaque refresh selection. |
-| RESEARCH | — | Outbox, broker confirms, idempotent consumers, PostgreSQL truth | 01-03, 01-04 | COVERED | Durable job lifecycle with failure states. |
-| RESEARCH | — | AI output schema/provenance validation and human review | 01-03, 01-04 | COVERED | No automatic promotion to confirmed data. |
-| RESEARCH | — | No validated numeric agronomic inputs found | 01-02–01-04 | COVERED | Named missing-input markers across all five crops. |
-| RESEARCH | — | Private direct Storage upload and finalization verification | 01-05 | COVERED | Expiring API authorization and relational metadata only. |
-| CONTEXT | D-01 | Check active farm membership in DB every scoped request | 01-01–01-05 | COVERED | Including proposal confirmation and upload/hub access. |
-| CONTEXT | D-02 | Support-mediated recovery, code/email, no password visible to support | 01-01 | COVERED | Expiry/attempt/replay/session revocation controls. |
-| CONTEXT | D-03 | Pilot owner and farm admin only | 01-01–01-05 | COVERED | Worker/advisor excluded per roadmap. |
-| CONTEXT | D-04 | Official Google.GenAI from Worker, server-side key, configurable model | 01-03, 01-04 | COVERED | SDK verification before package pin. |
-| CONTEXT | D-05 | Climate provider unselected; contract now, source before production | 01-03 | COVERED | Explicit unavailable result until source is selected. |
-| CONTEXT | D-06 | AI outputs drafts; explicit owner/admin approval; deterministic agronomy | 01-03, 01-04 | COVERED | Persisted review/confirmation boundary. |
-| CONTEXT | D-07 | Five pilot crops | 01-02–01-04 | COVERED | plátano, yuca, batata, arroz, habichuela. |
-| CONTEXT | D-08 | Missing validated values are visible, never invented | 01-02–01-04 | COVERED | Withhold unsupported numeric outputs. |
-| CONTEXT | D-09 | Preserve parameter source/validation/region/validity metadata | 01-02–01-04 | COVERED | Stored with catalog and proposal snapshots. |
-| CONTEXT | D-10 | Immutable logbook and linked corrective operations | 01-05 | COVERED | Original row retained and linked. |
-| CONTEXT | D-11 | API-authorized optional Supabase photo storage | 01-05 | COVERED | Short-lived upload authorization and DB metadata. |
-| CONTEXT | D-12 | PostgreSQL truth, API/Worker, Rabbit outbox, idempotence, SignalR status | 01-03–01-04 | COVERED | Worker completion and status are durable; SignalR is advisory. |
+| GOAL | — | Producer manages core farm data, reviews planting assistance, and keeps manual logbook | 01-01–01-08 | COVERED | Backend APIs, no client UI. |
+| REQ | REQ-pilot-accounts | Account creation, management, mediated recovery | 01-01, 01-02 | COVERED | Identity and support-reviewed email recovery. |
+| REQ | REQ-pilot-farms-parcels | Farm and parcel management | 01-01, 01-03 | COVERED | Request-time membership and tenant-safe relations. |
+| REQ | REQ-pilot-crop-cycle | Crop selection and cycle | 01-04 | COVERED | Five-crop catalog and parcel-linked cycle. |
+| REQ | REQ-pilot-sowing-plan | AI sowing proposal and climate review | 01-05, 01-06 | COVERED | Async draft; climate unavailable until source selection. |
+| REQ | REQ-pilot-planting-frame | AI-assisted planting frame | 01-07 | COVERED | Deterministic validated capacity and confirmation. |
+| REQ | REQ-pilot-manual-logbook | Manual logbook | 01-08 | COVERED | Immutable linked corrections and photos. |
+| REQ | REQ-rf-g-01 | Farm/parcel name, location, area, crop | 01-01, 01-03, 01-04 | COVERED | Farm, parcel and crop-cycle attributes. |
+| REQ | REQ-rf-g-05 | Daily activity log and optional photos | 01-08 | COVERED | Activity types and private storage. |
+| REQ | REQ-rf-g-10 | Sowing factors, missing data, scenarios, uncertainty, validity | 01-05, 01-06 | COVERED | Preserve source, freshness, inputs and model metadata. |
+| REQ | REQ-rf-g-11 | Capacity from usable area/aisles/validated distances; producer selects | 01-07 | COVERED | Deterministic math and explicit confirmation. |
+| REQ | REQ-rf-g-38 | Crop catalog with framework, stages, cycle length, typical dates | 01-04, 01-07 | COVERED | Seed only validated values; expose missing fields. |
+| RESEARCH | — | .NET 10 LTS, compatible EF Core/Npgsql and package verification | 01-01–01-08 | COVERED | SDK 10 prerequisite; verify compatibility/provenance. |
+| RESEARCH | — | Identity token distinction from JWT/OIDC | 01-01, 01-02 | COVERED | First-party signed JWT and opaque rotating refresh. |
+| RESEARCH | — | Outbox, confirms, idempotent consumers, PostgreSQL truth | 01-05 | COVERED | Durable async lifecycle and idempotence. |
+| RESEARCH | — | AI schema/provenance validation and human review | 01-06, 01-07 | COVERED | No automatic promotion to confirmed data. |
+| RESEARCH | — | No validated numeric agronomic inputs found | 01-04, 01-06, 01-07 | COVERED | Missing markers; numeric advice gated on evidence. |
+| RESEARCH | — | Private direct Storage upload and finalization verification | 01-08 | COVERED | Short-lived authorization and metadata. |
+| CONTEXT | D-01 | Check active farm membership in DB every scoped request | 01-01–01-08 | COVERED | Includes confirmation, uploads and hub access. |
+| CONTEXT | D-02 | Support-mediated recovery with no password exposure | 01-02 | COVERED | Expiry, attempt/rate limits, review and revocation. |
+| CONTEXT | D-03 | Pilot owner and farm admin only | 01-01–01-08 | COVERED | Worker/advisor excluded. |
+| CONTEXT | D-04 | Official Google.GenAI from Worker, server key, configurable model | 01-06, 01-07 | COVERED | Verify SDK before pinning. |
+| CONTEXT | D-05 | Climate source unselected; contract now, source before production | 01-06 | COVERED | Explicit unavailable state until validated source. |
+| CONTEXT | D-06 | AI outputs drafts; approval; deterministic agronomy | 01-06, 01-07 | COVERED | Review and confirmation boundary. |
+| CONTEXT | D-07 | Five pilot crops | 01-04, 01-06, 01-07 | COVERED | plátano, yuca, batata, arroz, habichuela. |
+| CONTEXT | D-08 | Missing validated values visible, never invented | 01-04, 01-06, 01-07 | COVERED | Withhold unsupported values. |
+| CONTEXT | D-09 | Preserve parameter source/validation/region/validity | 01-04, 01-06, 01-07 | COVERED | Catalog and proposal snapshots. |
+| CONTEXT | D-10 | Immutable logbook and linked corrections | 01-08 | COVERED | Original retained and linked. |
+| CONTEXT | D-11 | API-authorized optional Supabase photo storage | 01-08 | COVERED | Short-lived authorization and DB metadata. |
+| CONTEXT | D-12 | PostgreSQL truth, API/Worker, Rabbit, idempotence, SignalR | 01-05 | COVERED | PostgreSQL authoritative; SignalR advisory. |
 
 ## Security and Validation Notes
 

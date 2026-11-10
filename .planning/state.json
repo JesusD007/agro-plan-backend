@@ -1,0 +1,43 @@
+{
+  "contract": "1.0.0",
+  "flavor": "core",
+  "milestone": null,
+  "phases": [
+    {
+      "number": "1",
+      "name": "Farm Planning Pilot",
+      "status": "pending"
+    },
+    {
+      "number": "2",
+      "name": "Farm Operations and Safety",
+      "status": "pending"
+    },
+    {
+      "number": "3",
+      "name": "Workforce and Offline Operations",
+      "status": "pending"
+    },
+    {
+      "number": "4",
+      "name": "Applied Farm Intelligence",
+      "status": "pending"
+    },
+    {
+      "number": "5",
+      "name": "Marketplace and Traceability",
+      "status": "pending"
+    },
+    {
+      "number": "6",
+      "name": "Transport and Field-Service Integrations",
+      "status": "pending"
+    }
+  ],
+  "next": {
+    "command": "$gsd-progress --next",
+    "label": "Advance to the next step",
+    "reason": "Phase 1 of 6 · 0% · executing"
+  },
+  "updated_at": "2026-11-10T03:02:44.915Z"
+}

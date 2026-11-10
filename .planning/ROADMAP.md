@@ -23,17 +23,20 @@ Deliver AgroPlan's farm-scoped backend pilot first, then expand into farm operat
 **Requirements**: REQ-pilot-accounts, REQ-pilot-farms-parcels, REQ-pilot-crop-cycle, REQ-pilot-sowing-plan, REQ-pilot-planting-frame, REQ-pilot-manual-logbook, REQ-rf-g-01, REQ-rf-g-05, REQ-rf-g-10, REQ-rf-g-11, REQ-rf-g-38
 **Success Criteria** (what must be TRUE):
   1. A producer can create and access an account, create a farm and parcels, and associate a crop cycle with a parcel; users outside that farm cannot read or change its records.
-  2. A producer can request a sowing proposal with climate review, inspect its factors and uncertainty, and explicitly confirm it before it becomes saved data.
+  2. A producer can request a sowing proposal, inspect climate availability or missing-data status plus its factors and uncertainty, and explicitly confirm only a complete, supported proposal; live climate and numeric agronomic advice stay disabled until their sources are selected and validated.
   3. A producer can compare planting-frame options whose capacity is calculated by deterministic rules and select one with an explicit confirmation.
   4. An authorized producer can add and correct manual logbook entries while preserving the correction history.
-**Plans:** 5 plans
+**Plans:** 8 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — .NET skeleton, account lifecycle, and farm authorization
-- [ ] 01-02-PLAN.md — Pilot crop catalog and farm crop cycles
-- [ ] 01-03-PLAN.md — Asynchronous sowing proposal with Gemini and climate contract
-- [ ] 01-04-PLAN.md — Deterministic planting-frame proposals and confirmation
-- [ ] 01-05-PLAN.md — Immutable manual logbook and optional photo uploads
+- [ ] 01-01-PLAN.md — .NET skeleton and owner farm tracer
+- [ ] 01-02-PLAN.md — Account sessions and support-mediated recovery
+- [ ] 01-03-PLAN.md — Farm administration and parcel management
+- [ ] 01-04-PLAN.md — Five-crop catalog and farm crop cycles
+- [ ] 01-05-PLAN.md — Durable async sowing job and outbox lifecycle
+- [ ] 01-06-PLAN.md — Gemini/climate adapters and proposal review
+- [ ] 01-07-PLAN.md — Deterministic planting-frame proposals and confirmation
+- [ ] 01-08-PLAN.md — Immutable logbook and optional photo uploads
 
 ### Phase 2: Farm Operations and Safety
 **Goal**: A producer can maintain operational records and use them to make safer, better-informed farm decisions.
