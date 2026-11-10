@@ -41,6 +41,24 @@ Los requisitos de alcance del piloto confirmado se separan de la cartera funcion
 - acceptance: El usuario autorizado registra actividades en bitácora; correcciones preservan el historial en la propuesta técnica.
 - scope: bitácora
 
+## REQ-pilot-test-suite
+- source: User-approved Phase 1 quality addition, 2026-11-10.
+- description: Automated xUnit v3 coverage for the complete pilot API, domain rules, persistence constraints, worker flows, and security boundaries.
+- acceptance: Unit and isolated integration tests cover every Phase 1 requirement, including current/revoked farm membership, safe missing-data behavior, immutable logbook/attachments, outbox and consumer idempotency, and recovery; tests need no production credentials.
+- scope: testing, quality, security
+
+## REQ-pilot-api-docs
+- source: User-approved Phase 1 quality addition, 2026-11-10.
+- description: Interactive Scalar API documentation backed by an OpenAPI document.
+- acceptance: Development exposes a valid OpenAPI JSON document and Scalar UI; production routes remain disabled by default.
+- scope: API, documentation
+
+## REQ-pilot-provider-neutral-ai
+- source: User-approved Phase 1 architecture addition, 2026-11-10.
+- description: Keep AI proposal orchestration independent from the currently selected Gemini provider.
+- acceptance: Application and worker use a provider-neutral AI contract; Gemini remains the current adapter and can be replaced through DI without changing application behavior.
+- scope: AI, architecture
+
 ## REQ-rf-g-01
 - source: ../agro-plan-doc/Doc/AgroPlan - Documentacion Funcional.md
 - description: Registrar fincas y parcelas con nombre, ubicación, tamaño y cultivo.
@@ -515,13 +533,16 @@ Each documented requirement is assigned to exactly one roadmap phase. The six pi
 | REQ-pilot-farms-parcels | Phase 1: Farm Planning Pilot | Complete |
 | REQ-pilot-crop-cycle | Phase 1: Farm Planning Pilot | Complete |
 | REQ-pilot-sowing-plan | Phase 1: Farm Planning Pilot | Complete |
-| REQ-pilot-planting-frame | Phase 1: Farm Planning Pilot | Complete |
+| REQ-pilot-planting-frame | Phase 1: Farm Planning Pilot | Complete (safe mode; numeric comparison gated on validated agronomic rules and parcel geometry) |
 | REQ-pilot-manual-logbook | Phase 1: Farm Planning Pilot | Complete |
 | REQ-rf-g-01 | Phase 1: Farm Planning Pilot | Complete |
 | REQ-rf-g-05 | Phase 1: Farm Planning Pilot | Complete |
 | REQ-rf-g-10 | Phase 1: Farm Planning Pilot | Complete |
-| REQ-rf-g-11 | Phase 1: Farm Planning Pilot | Complete |
+| REQ-rf-g-11 | Phase 1: Farm Planning Pilot | Complete (safe mode; missing inputs block capacity/options until rules and geometry are validated) |
 | REQ-rf-g-38 | Phase 1: Farm Planning Pilot | Complete |
+| REQ-pilot-test-suite | Phase 1: Farm Planning Pilot | Pending |
+| REQ-pilot-api-docs | Phase 1: Farm Planning Pilot | Pending |
+| REQ-pilot-provider-neutral-ai | Phase 1: Farm Planning Pilot | Pending |
 | REQ-rf-g-02 | Phase 2: Farm Operations and Safety | Pending |
 | REQ-rf-g-03 | Phase 2: Farm Operations and Safety | Pending |
 | REQ-rf-g-04 | Phase 2: Farm Operations and Safety | Pending |

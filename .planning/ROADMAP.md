@@ -20,13 +20,13 @@ Deliver AgroPlan's farm-scoped backend pilot first, then expand into farm operat
 ### Phase 1: Farm Planning Pilot
 **Goal**: A producer can securely create an account, set up a farm and crop cycle, use planting assistance, and keep a manual logbook.
 **Depends on**: Nothing (first phase)
-**Requirements**: REQ-pilot-accounts, REQ-pilot-farms-parcels, REQ-pilot-crop-cycle, REQ-pilot-sowing-plan, REQ-pilot-planting-frame, REQ-pilot-manual-logbook, REQ-rf-g-01, REQ-rf-g-05, REQ-rf-g-10, REQ-rf-g-11, REQ-rf-g-38
+**Requirements**: REQ-pilot-accounts, REQ-pilot-farms-parcels, REQ-pilot-crop-cycle, REQ-pilot-sowing-plan, REQ-pilot-planting-frame, REQ-pilot-manual-logbook, REQ-pilot-test-suite, REQ-pilot-api-docs, REQ-pilot-provider-neutral-ai, REQ-rf-g-01, REQ-rf-g-05, REQ-rf-g-10, REQ-rf-g-11, REQ-rf-g-38
 **Success Criteria** (what must be TRUE):
   1. A producer can create and access an account, create a farm and parcels, and associate a crop cycle with a parcel; users outside that farm cannot read or change its records.
   2. A producer can request a sowing proposal, inspect climate availability or missing-data status plus its factors and uncertainty, and explicitly confirm only a complete, supported proposal; live climate and numeric agronomic advice stay disabled until their sources are selected and validated.
-  3. A producer can compare planting-frame options whose capacity is calculated by deterministic rules and select one with an explicit confirmation.
+  3. A producer can request a farm-scoped planting-frame proposal. When validated spacing rules and usable parcel geometry are available, capacity is calculated deterministically and the producer explicitly confirms a choice; otherwise the API names the missing inputs and returns no capacity or options. Numeric comparison stays gated until agronomic sources and geometry are validated.
   4. An authorized producer can add and correct manual logbook entries while preserving the correction history.
-**Plans:** 8/8 plans executed
+**Plans:** 8/11 plans executed
 
 Plans:
 - [x] 01-01-PLAN.md — .NET skeleton and owner farm tracer
@@ -37,6 +37,9 @@ Plans:
 - [x] 01-06-PLAN.md — Gemini/climate adapters and proposal review
 - [x] 01-07-PLAN.md — Deterministic planting-frame proposals and confirmation
 - [x] 01-08-PLAN.md — Immutable logbook and optional photo uploads
+- [ ] 01-09-PLAN.md — Provider-neutral AI contract and Scalar API reference
+- [ ] 01-10-PLAN.md — xUnit v3 unit test suite for pilot rules and worker behavior
+- [ ] 01-11-PLAN.md — API, persistence, and worker integration test coverage
 
 ### Phase 2: Farm Operations and Safety
 **Goal**: A producer can maintain operational records and use them to make safer, better-informed farm decisions.
@@ -98,7 +101,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Farm Planning Pilot | 8/8 | In Progress | - |
+| 1. Farm Planning Pilot | 8/11 | In Progress | - |
 | 2. Farm Operations and Safety | 0/TBD | Not started | - |
 | 3. Workforce and Offline Operations | 0/TBD | Not started | - |
 | 4. Applied Farm Intelligence | 0/TBD | Not started | - |
