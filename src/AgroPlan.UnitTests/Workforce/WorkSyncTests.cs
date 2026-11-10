@@ -31,4 +31,10 @@ public sealed class WorkSyncTests
         Assert.Equal("Applied", receipt.Status);
         Assert.Equal("{\"taskVersion\":2}", receipt.ResultJson);
     }
+
+    [Fact]
+    public void Task_sync_conflict_aggregate_is_available()
+    {
+        Assert.NotNull(typeof(WorkTask).Assembly.GetType("AgroPlan.Domain.Workforce.TaskSyncConflict"));
+    }
 }

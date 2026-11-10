@@ -134,6 +134,53 @@ public sealed class WorkSyncTests(PostgreSqlFixture database) : IAsyncLifetime
         Assert.Equal(1, await verifyDb.SyncOperationReceipts.CountAsync(row => row.ClientOperationId == workerOperationId));
     }
 
+    [Fact]
+    public async Task Stale_task_update_preserves_client_and_server_versions_until_admin_resolution()
+    {
+        database.EnsureAvailable();
+        TestData.SetBearer(_client, _workerId);
+        var dueDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(2));
+        var currentOperationId = Guid.NewGuid();
+        var current = await _client.PostAsJsonAsync($"/api/farms/{_farmId}/work-sync", new
+        {
+            operations = new[]
+            {
+                new { operationId = currentOperationId, taskId = _taskId, kind = "task.update", baseVersion = 1,
+                    payload = new { description = "Server version", dueDate } }
+            }
+        });
+        Assert.Equal(HttpStatusCode.OK, current.StatusCode);
+        var currentResult = await current.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+        Assert.Equal("Applied", currentResult.GetProperty("operations")[0].GetProperty("status").GetString());
+        Assert.Equal(2, currentResult.GetProperty("operations")[0].GetProperty("taskVersion").GetInt32());
+
+        var conflictOperationId = Guid.NewGuid();
+        var stale = await _client.PostAsJsonAsync($"/api/farms/{_farmId}/work-sync", new
+        {
+            operations = new[]
+            {
+                new { operationId = conflictOperationId, taskId = _taskId, kind = "task.update", baseVersion = 1,
+                    payload = new { description = "Client version", dueDate } }
+            }
+        });
+        Assert.Equal(HttpStatusCode.OK, stale.StatusCode);
+        var staleResult = await stale.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+        Assert.Equal("Conflict", staleResult.GetProperty("operations")[0].GetProperty("status").GetString());
+        var conflictId = staleResult.GetProperty("operations")[0].GetProperty("conflictId").GetGuid();
+        await using (var db = database.CreateDbContext())
+            Assert.Equal("Server version", (await db.WorkTasks.SingleAsync(task => task.Id == _taskId)).Description);
+
+        TestData.SetBearer(_client, _workerId);
+        Assert.Equal(HttpStatusCode.Forbidden, (await _client.PostAsJsonAsync(
+            $"/api/farms/{_farmId}/work-sync/conflicts/{conflictId}/resolve", new { resolution = "client" })).StatusCode);
+        TestData.SetBearer(_client, _ownerId);
+        var resolved = await _client.PostAsJsonAsync($"/api/farms/{_farmId}/work-sync/conflicts/{conflictId}/resolve",
+            new { resolution = "client" });
+        Assert.Equal(HttpStatusCode.OK, resolved.StatusCode);
+        await using var verifyDb = database.CreateDbContext();
+        Assert.Equal("Client version", (await verifyDb.WorkTasks.SingleAsync(task => task.Id == _taskId)).Description);
+    }
+
     private static ApplicationUser User(string id) => new()
     {
         Id = id,
