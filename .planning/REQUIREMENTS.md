@@ -515,12 +515,12 @@ Each documented requirement is assigned to exactly one roadmap phase. The six pi
 | REQ-pilot-farms-parcels | Phase 1: Farm Planning Pilot | Complete |
 | REQ-pilot-crop-cycle | Phase 1: Farm Planning Pilot | Complete |
 | REQ-pilot-sowing-plan | Phase 1: Farm Planning Pilot | Complete |
-| REQ-pilot-planting-frame | Phase 1: Farm Planning Pilot | Pending |
+| REQ-pilot-planting-frame | Phase 1: Farm Planning Pilot | Complete |
 | REQ-pilot-manual-logbook | Phase 1: Farm Planning Pilot | Pending |
 | REQ-rf-g-01 | Phase 1: Farm Planning Pilot | Complete |
 | REQ-rf-g-05 | Phase 1: Farm Planning Pilot | Pending |
 | REQ-rf-g-10 | Phase 1: Farm Planning Pilot | Complete |
-| REQ-rf-g-11 | Phase 1: Farm Planning Pilot | Pending |
+| REQ-rf-g-11 | Phase 1: Farm Planning Pilot | Complete |
 | REQ-rf-g-38 | Phase 1: Farm Planning Pilot | Complete |
 | REQ-rf-g-02 | Phase 2: Farm Operations and Safety | Pending |
 | REQ-rf-g-03 | Phase 2: Farm Operations and Safety | Pending |
