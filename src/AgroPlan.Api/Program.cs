@@ -12,6 +12,7 @@ using AgroPlan.Infrastructure.Messaging;
 using AgroPlan.Infrastructure.Storage;
 using AgroPlan.Infrastructure.Climate;
 using AgroPlan.Infrastructure.Prices;
+using AgroPlan.Application.AdvisoryAccess;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
@@ -106,6 +107,8 @@ builder.Services.AddAuthorization(options =>
     });
 });
 builder.Services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, FarmMembershipAuthorizationHandler>();
+builder.Services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, AdvisorReportAuthorizationHandler>();
+builder.Services.AddScoped<AdvisorGrantService>();
 builder.Services.AddScoped<IFarmAuthorization, FarmAuthorizationService>();
 builder.Services.AddScoped<ICropCatalogRepository, CropCatalogRepository>();
 builder.Services.AddScoped<CropCatalogService>();

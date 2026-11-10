@@ -5,6 +5,7 @@ using AgroPlan.Domain.Logbook;
 using AgroPlan.Domain.Calendars;
 using AgroPlan.Domain.Operations;
 using AgroPlan.Domain.Safety;
+using AgroPlan.Domain.AdvisoryAccess;
 using AgroPlan.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -38,6 +39,7 @@ public sealed class AgroPlanDbContext(DbContextOptions<AgroPlanDbContext> option
     public DbSet<ValidatedProductLabel> ValidatedProductLabels => Set<ValidatedProductLabel>();
     public DbSet<HarvestEntry> HarvestEntries => Set<HarvestEntry>();
     public DbSet<CropCalendarTemplate> CropCalendarTemplates => Set<CropCalendarTemplate>();
+    public DbSet<AdvisorAccessGrant> AdvisorAccessGrants => Set<AdvisorAccessGrant>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
