@@ -1,13 +1,17 @@
 using AgroPlan.Api.Authorization;
 using AgroPlan.Api.Identity;
+using AgroPlan.Application.UseCases;
+using AgroPlan.Api.Hubs;
 using AgroPlan.Infrastructure.Identity;
 using AgroPlan.Infrastructure.Persistence;
 using AgroPlan.Application.Crops;
 using AgroPlan.Application.Abstractions;
 using AgroPlan.Infrastructure.Email;
+using AgroPlan.Infrastructure.Messaging;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Threading.RateLimiting;
@@ -42,6 +46,9 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
     .AddDefaultTokenProviders();
 
 builder.Services.AddSingleton(new TokenIssuer(signingKey, issuer, audience));
+builder.Services.AddSingleton<RabbitMqConnection>();
+builder.Services.AddSingleton<RabbitMqPublisher>();
+builder.Services.AddHostedService<OutboxPublisher>();
 builder.Services.AddScoped<RefreshSessionService>();
 builder.Services.AddSingleton<IEmailSender, ConfiguredEmailSender>();
 builder.Services.AddScoped<RecoveryService>(services => new RecoveryService(
@@ -69,6 +76,16 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             NameClaimType = "sub",
             RoleClaimType = "role"
         };
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                if (!string.IsNullOrEmpty(accessToken) && context.HttpContext.Request.Path.StartsWithSegments("/hubs/jobs"))
+                    context.Token = accessToken;
+                return Task.CompletedTask;
+            }
+        };
     });
 
 builder.Services.AddAuthorization(options =>
@@ -83,6 +100,7 @@ builder.Services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHand
 builder.Services.AddScoped<IFarmAuthorization, FarmAuthorizationService>();
 builder.Services.AddScoped<ICropCatalogRepository, CropCatalogRepository>();
 builder.Services.AddScoped<CropCatalogService>();
+builder.Services.AddScoped<SubmitSowingPlan>();
 builder.Services.AddRateLimiter(options =>
 {
     options.AddPolicy("identity", httpContext => RateLimitPartition.GetFixedWindowLimiter(
@@ -105,6 +123,7 @@ builder.Services.AddRateLimiter(options =>
         }));
 });
 builder.Services.AddControllers();
+builder.Services.AddSignalR();
 builder.Services.AddHealthChecks();
 
 var app = builder.Build();
@@ -116,4 +135,5 @@ app.UseAuthorization();
 app.MapHealthChecks("/health");
 app.MapIdentityEndpoints();
 app.MapControllers();
+app.MapHub<JobStatusHub>("/hubs/jobs");
 app.Run();

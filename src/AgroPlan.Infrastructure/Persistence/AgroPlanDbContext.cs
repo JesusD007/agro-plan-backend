@@ -1,5 +1,6 @@
 using AgroPlan.Domain.Farms;
 using AgroPlan.Domain.Crops;
+using AgroPlan.Domain.Planning;
 using AgroPlan.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -20,6 +21,8 @@ public sealed class AgroPlanDbContext(DbContextOptions<AgroPlanDbContext> option
     public DbSet<CropCatalogEntry> CropCatalogEntries => Set<CropCatalogEntry>();
     public DbSet<AgronomicParameter> AgronomicParameters => Set<AgronomicParameter>();
     public DbSet<CropCycle> CropCycles => Set<CropCycle>();
+    public DbSet<SowingProposal> SowingProposals => Set<SowingProposal>();
+    public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
