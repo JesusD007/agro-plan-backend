@@ -29,7 +29,8 @@ public sealed class LogbookAttachmentsController(AgroPlanDbContext db, IFileStor
         var expires = now.AddMinutes(10);
         var id = Guid.NewGuid();
         var authorization = storage.CreateUploadAuthorization(farmId, entryId, id, request.ContentType, expires);
-        db.LogbookAttachments.Add(new LogbookAttachment(id, farmId, entryId, authorization.ObjectKey,
+        var finalObjectKey = $"farms/{farmId:D}/logbook/{entryId:D}/{id:D}/final";
+        db.LogbookAttachments.Add(new LogbookAttachment(id, farmId, entryId, finalObjectKey, authorization.ObjectKey,
             request.ContentType, request.SizeBytes, actor, now, expires));
         await db.SaveChangesAsync(ct);
         return Ok(new UploadAuthorizationResponse(id, authorization.UploadUrl, authorization.ExpiresAt,
@@ -41,19 +42,39 @@ public sealed class LogbookAttachmentsController(AgroPlanDbContext db, IFileStor
     {
         var attachment = await db.LogbookAttachments.SingleOrDefaultAsync(x => x.FarmId == farmId && x.LogbookEntryId == entryId && x.Id == attachmentId, ct);
         if (attachment is null) return NotFound();
-        if (attachment.FinalizedAt.HasValue) return Conflict(new { message = "Attachment is already finalized." });
+        if (attachment.FinalizedAt.HasValue) return Ok(new { attachment.Id, attachment.ObjectKey, attachment.ContentType, attachment.SizeBytes, attachment.FinalizedAt });
         var now = DateTimeOffset.UtcNow;
         if (now > attachment.ExpiresAt) return BadRequest(new { message = "Upload authorization has expired." });
-        var expectedKey = $"farms/{farmId:D}/logbook/{entryId:D}/{attachmentId:D}";
-        if (!string.Equals(attachment.ObjectKey, expectedKey, StringComparison.Ordinal)) return BadRequest();
-        var metadata = await storage.GetMetadataAsync(expectedKey, ct);
-        if (metadata is null) return BadRequest(new { message = "Uploaded object was not found." });
-        if (!AllowedTypes.Contains(metadata.ContentType) || metadata.ContentType != attachment.ContentType ||
-            metadata.SizeBytes != attachment.ExpectedSizeBytes || metadata.SizeBytes is <= 0 or > 10 * 1024 * 1024)
-            return BadRequest(new { message = "Uploaded object metadata does not match the authorized file." });
-        attachment.Finalize(metadata.SizeBytes, now);
-        await db.SaveChangesAsync(ct);
-        return Ok(new { attachment.Id, attachment.ObjectKey, attachment.ContentType, attachment.SizeBytes, attachment.FinalizedAt });
+        var finalizingBefore = now.AddMinutes(-15);
+        var claimed = await db.LogbookAttachments.Where(x => x.Id == attachmentId && x.FarmId == farmId &&
+                x.LogbookEntryId == entryId && x.FinalizedAt == null && (x.FinalizingAt == null || x.FinalizingAt < finalizingBefore))
+            .ExecuteUpdateAsync(update => update.SetProperty(x => x.FinalizingAt, now), ct);
+        await db.Entry(attachment).ReloadAsync(ct);
+        if (attachment.FinalizedAt.HasValue) return Ok(new { attachment.Id, attachment.ObjectKey, attachment.ContentType, attachment.SizeBytes, attachment.FinalizedAt });
+        if (claimed == 0) return Conflict(new { message = "Attachment finalization is already in progress; retry shortly." });
+
+        try
+        {
+            var metadata = await storage.GetMetadataAsync(attachment.UploadObjectKey, ct);
+            if (metadata is not null && (!AllowedTypes.Contains(metadata.ContentType) || metadata.ContentType != attachment.ContentType ||
+                metadata.SizeBytes != attachment.ExpectedSizeBytes || metadata.SizeBytes is <= 0 or > 10 * 1024 * 1024))
+                return BadRequest(new { message = "Uploaded object metadata does not match the authorized file." });
+            var finalized = await storage.FinalizeUploadAsync(attachment.UploadObjectKey, attachment.ObjectKey, ct);
+            if (finalized is null) return BadRequest(new { message = "Uploaded object was not found." });
+            metadata = finalized.Metadata;
+            if (!AllowedTypes.Contains(metadata.ContentType) || metadata.ContentType != attachment.ContentType ||
+                metadata.SizeBytes != attachment.ExpectedSizeBytes || metadata.SizeBytes is <= 0 or > 10 * 1024 * 1024)
+                return BadRequest(new { message = "Uploaded object metadata does not match the authorized file." });
+            attachment.Finalize(finalized.ObjectKey, metadata.SizeBytes, now);
+            await db.SaveChangesAsync(ct);
+            return Ok(new { attachment.Id, attachment.ObjectKey, attachment.ContentType, attachment.SizeBytes, attachment.FinalizedAt });
+        }
+        finally
+        {
+            if (!attachment.FinalizedAt.HasValue)
+                await db.LogbookAttachments.Where(x => x.Id == attachmentId && x.FarmId == farmId && x.FinalizedAt == null)
+                    .ExecuteUpdateAsync(update => update.SetProperty(x => x.FinalizingAt, (DateTimeOffset?)null), ct);
+        }
     }
 
     [HttpGet("{attachmentId:guid}")]
@@ -63,7 +84,7 @@ public sealed class LogbookAttachmentsController(AgroPlanDbContext db, IFileStor
             x => x.FarmId == farmId && x.LogbookEntryId == entryId && x.Id == attachmentId && x.FinalizedAt != null, ct);
         if (attachment is null) return NotFound();
         var expires = DateTimeOffset.UtcNow.AddMinutes(10);
-        var authorization = storage.CreateDownloadAuthorization(farmId, entryId, attachmentId, expires);
+        var authorization = storage.CreateDownloadAuthorization(attachment.ObjectKey, expires);
         return Ok(new UploadAuthorizationResponse(attachmentId, authorization.UploadUrl, expires,
             attachment.ContentType, attachment.SizeBytes ?? 0));
     }

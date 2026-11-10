@@ -4,7 +4,7 @@ public sealed class LogbookAttachment
 {
     private LogbookAttachment() { }
 
-    public LogbookAttachment(Guid id, Guid farmId, Guid logbookEntryId, string objectKey,
+    public LogbookAttachment(Guid id, Guid farmId, Guid logbookEntryId, string objectKey, string uploadObjectKey,
         string contentType, long expectedSizeBytes, string uploadedByUserId, DateTimeOffset createdAt, DateTimeOffset expiresAt)
     {
         if (id == Guid.Empty || farmId == Guid.Empty || logbookEntryId == Guid.Empty) throw new ArgumentException("Attachment identity is required.");
@@ -13,6 +13,7 @@ public sealed class LogbookAttachment
         FarmId = farmId;
         LogbookEntryId = logbookEntryId;
         ObjectKey = objectKey;
+        UploadObjectKey = uploadObjectKey;
         ContentType = contentType;
         ExpectedSizeBytes = expectedSizeBytes;
         UploadedByUserId = uploadedByUserId;
@@ -23,6 +24,7 @@ public sealed class LogbookAttachment
     public Guid Id { get; private set; }
     public Guid FarmId { get; private set; }
     public Guid LogbookEntryId { get; private set; }
+    public string UploadObjectKey { get; private set; } = null!;
     public string ObjectKey { get; private set; } = null!;
     public string ContentType { get; private set; } = null!;
     public long ExpectedSizeBytes { get; private set; }
@@ -31,13 +33,16 @@ public sealed class LogbookAttachment
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset ExpiresAt { get; private set; }
     public DateTimeOffset? FinalizedAt { get; private set; }
+    public DateTimeOffset? FinalizingAt { get; private set; }
 
-    public void Finalize(long sizeBytes, DateTimeOffset finalizedAt)
+    public void Finalize(string objectKey, long sizeBytes, DateTimeOffset finalizedAt)
     {
-        if (FinalizedAt.HasValue) throw new InvalidOperationException("Attachment is already finalized.");
+        if (FinalizedAt.HasValue) return;
         if (sizeBytes != ExpectedSizeBytes || sizeBytes is <= 0 or > 10 * 1024 * 1024)
             throw new ArgumentOutOfRangeException(nameof(sizeBytes));
+        ObjectKey = objectKey;
         SizeBytes = sizeBytes;
         FinalizedAt = finalizedAt;
+        FinalizingAt = null;
     }
 }

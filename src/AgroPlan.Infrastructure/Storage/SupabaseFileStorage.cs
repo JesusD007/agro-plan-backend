@@ -30,7 +30,7 @@ public sealed class SupabaseFileStorage(IConfiguration configuration) : IFileSto
     public UploadAuthorization CreateUploadAuthorization(Guid farmId, Guid entryId, Guid attachmentId,
         string contentType, DateTimeOffset expiresAt)
     {
-        var key = $"farms/{farmId:D}/logbook/{entryId:D}/{attachmentId:D}";
+        var key = $"farms/{farmId:D}/logbook/{entryId:D}/{attachmentId:D}/staging";
         var url = _client.Value.GetPreSignedURL(new GetPreSignedUrlRequest
         {
             BucketName = _bucket,
@@ -42,9 +42,8 @@ public sealed class SupabaseFileStorage(IConfiguration configuration) : IFileSto
         return new UploadAuthorization(key, url, expiresAt, contentType);
     }
 
-    public UploadAuthorization CreateDownloadAuthorization(Guid farmId, Guid entryId, Guid attachmentId, DateTimeOffset expiresAt)
+    public UploadAuthorization CreateDownloadAuthorization(string key, DateTimeOffset expiresAt)
     {
-        var key = $"farms/{farmId:D}/logbook/{entryId:D}/{attachmentId:D}";
         var url = _client.Value.GetPreSignedURL(new GetPreSignedUrlRequest
         {
             BucketName = _bucket,
@@ -53,6 +52,29 @@ public sealed class SupabaseFileStorage(IConfiguration configuration) : IFileSto
             Expires = expiresAt.UtcDateTime
         });
         return new UploadAuthorization(key, url, expiresAt, string.Empty);
+    }
+
+    public async Task<FinalizedStoredObject?> FinalizeUploadAsync(string stagingObjectKey, string finalObjectKey, CancellationToken cancellationToken)
+    {
+        var finalMetadata = await GetMetadataAsync(finalObjectKey, cancellationToken);
+        if (finalMetadata is not null) return new FinalizedStoredObject(finalObjectKey, finalMetadata);
+
+        var stagedMetadata = await GetMetadataAsync(stagingObjectKey, cancellationToken);
+        if (stagedMetadata is null) return null;
+        await _client.Value.CopyObjectAsync(new CopyObjectRequest
+        {
+            SourceBucket = _bucket,
+            SourceKey = stagingObjectKey,
+            DestinationBucket = _bucket,
+            DestinationKey = finalObjectKey,
+            MetadataDirective = S3MetadataDirective.REPLACE,
+            ContentType = stagedMetadata.ContentType
+        }, cancellationToken);
+
+        finalMetadata = await GetMetadataAsync(finalObjectKey, cancellationToken);
+        if (finalMetadata is null) return null;
+        await _client.Value.DeleteObjectAsync(new DeleteObjectRequest { BucketName = _bucket, Key = stagingObjectKey }, cancellationToken);
+        return new FinalizedStoredObject(finalObjectKey, finalMetadata);
     }
 
     public async Task<StoredObjectMetadata?> GetMetadataAsync(string objectKey, CancellationToken cancellationToken)
