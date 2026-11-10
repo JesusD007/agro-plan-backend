@@ -46,4 +46,5 @@ public sealed class CropCatalogEntry
     public DateTimeOffset? ValidFrom { get; private set; }
     public DateTimeOffset? ValidTo { get; private set; }
     public ICollection<AgronomicParameter> Parameters { get; private set; } = new List<AgronomicParameter>();
+    public ICollection<CropFramework> Frameworks { get; private set; } = new List<CropFramework>();
 }
