@@ -17,6 +17,7 @@ public sealed class TaskScheduleRevisionConfiguration : IEntityTypeConfiguration
         builder.Property(revision => revision.Explanation).HasMaxLength(1000).IsRequired();
         builder.Property(revision => revision.Status).HasConversion<string>().HasMaxLength(16).IsRequired();
         builder.Property(revision => revision.ConfirmedByUserId).HasMaxLength(450);
+        builder.Property(revision => revision.NotifiedAt);
         builder.HasIndex(revision => new { revision.FarmId, revision.SourceEventId, revision.WorkTaskId }).IsUnique();
         builder.HasIndex(revision => new { revision.FarmId, revision.WorkTaskId, revision.ProposedAt });
         builder.HasOne<WorkTask>().WithMany()

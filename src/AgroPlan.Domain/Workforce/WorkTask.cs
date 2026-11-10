@@ -99,6 +99,15 @@ public sealed class WorkTask
         Version++;
     }
 
+    public void Reschedule(DateOnly dueDate)
+    {
+        if (Status is not (WorkTaskStatus.Pending or WorkTaskStatus.InProgress))
+            throw new InvalidOperationException("Only pending or in-progress work can be rescheduled.");
+        if (dueDate == default) throw new ArgumentException("A due date is required.", nameof(dueDate));
+        DueDate = dueDate;
+        Version++;
+    }
+
     public void Submit(DateTimeOffset submittedAt)
     {
         if (submittedAt == default) throw new ArgumentException("Submission time is required.", nameof(submittedAt));

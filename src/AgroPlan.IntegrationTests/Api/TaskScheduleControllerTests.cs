@@ -48,6 +48,11 @@ public sealed class TaskScheduleControllerTests(PostgreSqlFixture postgres)
         var verifyDb = verify.ServiceProvider.GetRequiredService<AgroPlanDbContext>();
         var task = await verifyDb.WorkTasks.FindAsync([taskId], TestContext.Current.CancellationToken);
         Assert.Equal(new DateOnly(2026, 11, 21), task!.DueDate);
+        var revision = await verifyDb.TaskScheduleRevisions.SingleAsync(x => x.FarmId == farmId && x.WorkTaskId == taskId,
+            TestContext.Current.CancellationToken);
+        Assert.Equal(new DateOnly(2026, 11, 20), revision.PreviousDate);
+        Assert.Equal(new DateOnly(2026, 11, 21), revision.ProposedDate);
+        Assert.Equal(ownerId, revision.ConfirmedByUserId);
         Assert.True(await verifyDb.OutboxMessages.AnyAsync(x => x.EventType == "task-schedule.changed" && x.AggregateId == taskId,
             TestContext.Current.CancellationToken));
         Assert.True(await verifyDb.OutboxMessages.AnyAsync(x => x.EventType == "task-calendar.sync" && x.AggregateId == taskId,

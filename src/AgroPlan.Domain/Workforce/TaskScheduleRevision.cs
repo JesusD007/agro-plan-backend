@@ -12,13 +12,15 @@ public sealed class TaskScheduleRevision
 {
     private TaskScheduleRevision() { }
 
-    public TaskScheduleRevision(Guid id, Guid farmId, Guid workTaskId, Guid sourceEventId,
-        Guid sourceRecordId, int sourceRecordVersion, int taskVersion, DateOnly previousDate,
+    public TaskScheduleRevision(Guid id, Guid farmId, Guid workTaskId, Guid? sourceEventId,
+        Guid? sourceRecordId, int sourceRecordVersion, int taskVersion, DateOnly previousDate,
         DateOnly proposedDate, string explanation, DateTimeOffset proposedAt)
     {
-        if (id == Guid.Empty || farmId == Guid.Empty || workTaskId == Guid.Empty || sourceEventId == Guid.Empty || sourceRecordId == Guid.Empty)
-            throw new ArgumentException("Revision, farm, task, and source identifiers are required.");
-        if (sourceRecordVersion <= 0 || taskVersion <= 0) throw new ArgumentOutOfRangeException(nameof(sourceRecordVersion));
+        if (id == Guid.Empty || farmId == Guid.Empty || workTaskId == Guid.Empty)
+            throw new ArgumentException("Revision, farm and task identifiers are required.");
+        if ((sourceEventId.HasValue != sourceRecordId.HasValue) || sourceRecordVersion < 0 ||
+            (sourceEventId.HasValue != (sourceRecordVersion > 0)) || taskVersion <= 0)
+            throw new ArgumentOutOfRangeException(nameof(sourceRecordVersion));
         if (proposedDate == default || previousDate == default || previousDate == proposedDate)
             throw new ArgumentException("A revision requires distinct, valid previous and proposed dates.");
         if (string.IsNullOrWhiteSpace(explanation) || explanation.Trim().Length > 1000)
@@ -33,8 +35,8 @@ public sealed class TaskScheduleRevision
     public Guid Id { get; private set; }
     public Guid FarmId { get; private set; }
     public Guid WorkTaskId { get; private set; }
-    public Guid SourceEventId { get; private set; }
-    public Guid SourceRecordId { get; private set; }
+    public Guid? SourceEventId { get; private set; }
+    public Guid? SourceRecordId { get; private set; }
     public int SourceRecordVersion { get; private set; }
     public int TaskVersion { get; private set; }
     public DateOnly PreviousDate { get; private set; }
@@ -44,6 +46,7 @@ public sealed class TaskScheduleRevision
     public DateTimeOffset ProposedAt { get; private set; }
     public string? ConfirmedByUserId { get; private set; }
     public DateTimeOffset? ConfirmedAt { get; private set; }
+    public DateTimeOffset? NotifiedAt { get; private set; }
 
     public void Confirm(string administratorUserId, DateTimeOffset confirmedAt, int currentTaskVersion)
     {
@@ -59,5 +62,12 @@ public sealed class TaskScheduleRevision
     {
         if (Status != TaskScheduleRevisionStatus.Proposed) return;
         Status = TaskScheduleRevisionStatus.Stale;
+    }
+
+    public void MarkNotified(DateTimeOffset notifiedAt)
+    {
+        if (Status != TaskScheduleRevisionStatus.Confirmed) throw new InvalidOperationException("Only a confirmed revision can be notified.");
+        if (notifiedAt == default) throw new ArgumentException("Notification time is required.", nameof(notifiedAt));
+        NotifiedAt ??= notifiedAt;
     }
 }
