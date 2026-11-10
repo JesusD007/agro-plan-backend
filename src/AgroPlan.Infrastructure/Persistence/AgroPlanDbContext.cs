@@ -31,6 +31,8 @@ public sealed class AgroPlanDbContext(DbContextOptions<AgroPlanDbContext> option
     public DbSet<LogbookAttachment> LogbookAttachments => Set<LogbookAttachment>();
     public DbSet<ExpenseEntry> ExpenseEntries => Set<ExpenseEntry>();
     public DbSet<IrrigationEntry> IrrigationEntries => Set<IrrigationEntry>();
+    public DbSet<InputApplicationEntry> InputApplicationEntries => Set<InputApplicationEntry>();
+    public DbSet<ValidatedApplicationFrequencyRule> ValidatedApplicationFrequencyRules => Set<ValidatedApplicationFrequencyRule>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
