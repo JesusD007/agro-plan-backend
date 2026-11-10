@@ -4,6 +4,9 @@ using Microsoft.Extensions.Logging;
 using AgroPlan.Infrastructure.Messaging;
 using AgroPlan.Infrastructure.Persistence;
 using AgroPlan.Worker.Jobs;
+using AgroPlan.Worker.AI;
+using AgroPlan.Worker.Climate;
+using AgroPlan.Application.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 
@@ -16,6 +19,8 @@ if (!string.IsNullOrWhiteSpace(rabbitMqUrl))
         throw new InvalidOperationException("Configure ConnectionStrings__AgroPlan when RABBITMQ_URL is enabled.");
     builder.Services.AddDbContext<AgroPlanDbContext>(options => options.UseNpgsql(connectionString));
     builder.Services.AddSingleton<RabbitMqConnection>();
+    builder.Services.AddSingleton<IGeminiProposalProvider, GeminiProposalProvider>();
+    builder.Services.AddSingleton<IClimateProvider, UnconfiguredClimateProvider>();
     builder.Services.AddHostedService<SowingPlanConsumer>();
 }
 else

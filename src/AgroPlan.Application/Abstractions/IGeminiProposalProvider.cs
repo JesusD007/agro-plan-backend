@@ -1,0 +1,38 @@
+namespace AgroPlan.Application.Abstractions;
+
+public sealed record ValidatedAgronomicInput(
+    string Key,
+    decimal NumericValue,
+    string Unit,
+    string SourceName,
+    string? SourceUrl,
+    string? Region,
+    DateTimeOffset? ValidFrom,
+    DateTimeOffset? ValidTo);
+
+public sealed record SowingGenerationInput(
+    string CropCode,
+    string CropName,
+    string CropValidationStatus,
+    string? CropRegion,
+    DateTimeOffset? CropValidFrom,
+    DateTimeOffset? CropValidTo,
+    DateOnly? DesiredPlantingDate,
+    decimal ParcelAreaHectares,
+    string? LocationDescription,
+    IReadOnlyList<ValidatedAgronomicInput> ValidatedParameters,
+    ClimateContext Climate);
+
+public sealed record GeminiProposalDraft(
+    string Summary,
+    string Model,
+    string PromptVersion,
+    string SchemaVersion,
+    DateTimeOffset GeneratedAt);
+
+public interface IGeminiProposalProvider
+{
+    Task<GeminiProposalDraft> GenerateDraftAsync(
+        SowingGenerationInput input,
+        CancellationToken cancellationToken);
+}

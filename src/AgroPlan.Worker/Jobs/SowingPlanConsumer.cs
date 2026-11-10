@@ -1,4 +1,7 @@
 using System.Text.Json;
+using AgroPlan.Application.Abstractions;
+using AgroPlan.Domain.Crops;
+using AgroPlan.Worker.AI;
 using AgroPlan.Domain.Planning;
 using AgroPlan.Infrastructure.Messaging;
 using AgroPlan.Infrastructure.Persistence;
@@ -13,6 +16,8 @@ namespace AgroPlan.Worker.Jobs;
 public sealed class SowingPlanConsumer(
     RabbitMqConnection connection,
     IServiceScopeFactory scopeFactory,
+    IClimateProvider climateProvider,
+    IGeminiProposalProvider geminiProvider,
     ILogger<SowingPlanConsumer> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -97,15 +102,93 @@ public sealed class SowingPlanConsumer(
         }
 
         if (proposal.Status != SowingProposalStatus.Pending) return;
+        try
+        {
+            var snapshot = JsonSerializer.Deserialize<ProposalSnapshot>(proposal.InputSnapshotJson,
+                new JsonSerializerOptions(JsonSerializerDefaults.Web));
+            if (snapshot is null) throw new InvalidOperationException("The proposal input snapshot is invalid.");
 
-        // The following plan adds the Gemini adapter. Until it is registered, terminate
-        // visibly instead of inventing guidance or leaving a job in pending forever.
-        proposal.MarkFailed(
-            "PROPOSAL_PROVIDER_NOT_CONFIGURED",
-            "Proposal generation is not configured yet. No agronomic guidance was generated.",
-            DateTimeOffset.UtcNow);
-        await dbContext.SaveChangesAsync(cancellationToken);
+            var cycle = await dbContext.CropCycles.AsNoTracking()
+                .Where(item => item.FarmId == proposal.FarmId && item.Id == proposal.CropCycleId)
+                .Include(item => item.CropCatalogEntry)
+                .ThenInclude(crop => crop.Parameters)
+                .SingleOrDefaultAsync(cancellationToken);
+            if (cycle is null)
+            {
+                proposal.MarkFailed("CROP_CYCLE_NOT_FOUND", "The crop cycle is no longer available.", DateTimeOffset.UtcNow);
+                await dbContext.SaveChangesAsync(cancellationToken);
+                return;
+            }
+
+            var now = DateTimeOffset.UtcNow;
+            var climate = await climateProvider.GetAsync(new ClimateRequest(
+                snapshot.LocationDescription, null, null, snapshot.DesiredPlantingDate, now), cancellationToken);
+            var parameters = cycle.CropCatalogEntry.Parameters
+                .Where(parameter => parameter.IsUsableAt(now))
+                .Select(parameter => new ValidatedAgronomicInput(
+                    parameter.Key, parameter.NumericValue!.Value, parameter.Unit!, parameter.SourceName!,
+                    parameter.SourceUrl, parameter.Region, parameter.ValidFrom, parameter.ValidTo))
+                .ToArray();
+            var input = new SowingGenerationInput(
+                cycle.CropCatalogEntry.Code,
+                cycle.CropCatalogEntry.DisplayName,
+                cycle.CropCatalogEntry.ValidationStatus.ToString(),
+                cycle.CropCatalogEntry.Region,
+                cycle.CropCatalogEntry.ValidFrom,
+                cycle.CropCatalogEntry.ValidTo,
+                snapshot.DesiredPlantingDate,
+                snapshot.ParcelAreaHectares,
+                snapshot.LocationDescription,
+                parameters,
+                climate);
+            var draft = await geminiProvider.GenerateDraftAsync(input, cancellationToken);
+            var missingInputs = snapshot.MissingInputs
+                .Concat(climate.MissingInputs)
+                .Concat(parameters.Length == 0 ? ["validated.crop.parameters"] : [])
+                .Distinct(StringComparer.Ordinal)
+                .ToArray();
+            var result = JsonSerializer.Serialize(new
+            {
+                status = "draft",
+                draft.Summary,
+                missingInputs,
+                sources = parameters.Select(parameter => new { parameter.Key, parameter.SourceName, parameter.SourceUrl, parameter.ValidFrom, parameter.ValidTo }),
+                climate,
+                model = draft.Model,
+                promptVersion = draft.PromptVersion,
+                schemaVersion = draft.SchemaVersion,
+                generatedAt = draft.GeneratedAt,
+                inputSnapshot = proposal.InputSnapshotJson,
+                confirmationAllowed = false
+            }, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+            proposal.MarkCompleted(result, DateTimeOffset.UtcNow);
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (GeminiConfigurationException)
+        {
+            proposal.MarkFailed("GEMINI_NOT_CONFIGURED", "Draft generation is not configured; no agronomic guidance was generated.", DateTimeOffset.UtcNow);
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (GeminiCircuitOpenException)
+        {
+            proposal.MarkFailed("GEMINI_TEMPORARILY_UNAVAILABLE", "Draft generation is temporarily unavailable.", DateTimeOffset.UtcNow);
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (GeminiProviderException)
+        {
+            proposal.MarkFailed("GEMINI_GENERATION_FAILED", "A safe draft could not be generated; no agronomic guidance was saved.", DateTimeOffset.UtcNow);
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
     }
 
     private sealed record SowingPlanRequested(Guid JobId, int Version);
+    private sealed record ProposalSnapshot(
+        DateOnly? DesiredPlantingDate,
+        decimal ParcelAreaHectares,
+        string? LocationDescription,
+        IReadOnlyList<string> MissingInputs);
 }
