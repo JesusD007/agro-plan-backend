@@ -1,4 +1,5 @@
 using AgroPlan.Application.Abstractions;
+using AgroPlan.Domain.Workforce;
 using AgroPlan.Infrastructure.Routing;
 using Xunit;
 
@@ -45,5 +46,13 @@ public sealed class WorkRouteTests
 
         Assert.Equal([firstTask, secondTask], result.OrderedTaskIds);
         Assert.Equal(geometry, result.GeometryGeoJson);
+    }
+
+    [Fact]
+    public void Versioned_work_route_snapshot_domain_type_is_available()
+    {
+        var domainAssembly = typeof(WorkTask).Assembly;
+
+        Assert.NotNull(domainAssembly.GetType("AgroPlan.Domain.Workforce.WorkRoute"));
     }
 }
