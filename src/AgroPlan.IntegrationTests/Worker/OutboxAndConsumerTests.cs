@@ -4,6 +4,8 @@ using System.Text;
 using System.Text.Json;
 using AgroPlan.Application.Abstractions;
 using AgroPlan.Domain.Crops;
+using AgroPlan.Domain.Calendars;
+using AgroPlan.Domain.Logbook;
 using AgroPlan.Infrastructure.Messaging;
 using AgroPlan.Infrastructure.Persistence;
 using AgroPlan.Worker.Climate;
@@ -21,6 +23,69 @@ namespace AgroPlan.IntegrationTests.Worker;
 [Collection(PostgreSqlRabbitCollection.Name)]
 public sealed class OutboxAndConsumerTests(PostgreSqlRabbitFixture services)
 {
+    [Fact]
+    public async Task Schedule_change_is_durable_explained_once_and_requires_producer_confirmation()
+    {
+        services.EnsureAvailable();
+        await using var factory = new ApiTestFactory(services.ConnectionString, rabbitMqUrl: services.RabbitMqUrl);
+        using var client = factory.CreateClient();
+        var ownerId = $"calendar-owner-{Guid.NewGuid():N}";
+        Guid farmId; Guid cycleId; Guid templateId = Guid.NewGuid();
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AgroPlanDbContext>();
+            var (farm, parcelId) = await TestData.SeedFarmAsync(db, ownerId); farmId = farm;
+            var crop = await db.CropCatalogEntries.SingleAsync(item => item.Code == "PLATANO");
+            var cycle = new CropCycle(Guid.NewGuid(), farmId, parcelId, crop, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-10)), null, null, DateTimeOffset.UtcNow);
+            db.CropCycles.Add(cycle); cycleId = cycle.Id;
+            var now = DateTimeOffset.UtcNow;
+            db.CropCalendarTemplates.Add(new CropCalendarTemplate(templateId, crop.Id, "calendar-test-v1", "approved fixture", "source-v1",
+                CropCalendarTemplateStatus.Validated, null, null, now.AddDays(-1), now.AddDays(7), null, null,
+                [new CropCalendarTask("irrigation-check", "growth", "Check irrigation", "Follow current sourced schedule.", 12, 1, CropCalendarOperationKind.Irrigation)]));
+            db.LogbookEntries.Add(new LogbookEntry(Guid.NewGuid(), farmId, parcelId, cycleId, LogbookActivityType.Sowing,
+                now.AddDays(-10), "Sowing confirmed", ownerId, now.AddDays(-10)));
+            await db.SaveChangesAsync();
+        }
+        TestData.SetBearer(client, ownerId);
+        using var create = await client.PostAsync($"/api/farms/{farmId}/crop-cycles/{cycleId}/schedule-change-proposals", null);
+        Assert.Equal(HttpStatusCode.Accepted, create.StatusCode);
+        using var created = JsonDocument.Parse(await create.Content.ReadAsStringAsync());
+        var proposalId = created.RootElement.GetProperty("id").GetGuid();
+        using var premature = await client.PostAsJsonAsync($"/api/farms/{farmId}/crop-cycles/{cycleId}/schedule-change-proposals/{proposalId}/confirm", new { version = 1 });
+        Assert.Equal(HttpStatusCode.Conflict, premature.StatusCode);
+
+        string eventJson;
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AgroPlanDbContext>();
+            eventJson = await db.OutboxMessages.Where(x => x.AggregateId == proposalId).Select(x => x.PayloadJson).SingleAsync();
+        }
+        await PublishScheduleDuplicateAsync(services.RabbitMqUrl, eventJson);
+        await PublishScheduleDuplicateAsync(services.RabbitMqUrl, eventJson);
+        var provider = new CountingAiProvider();
+        using var worker = CreateWorkerHost(services.ConnectionString, services.RabbitMqUrl, provider);
+        await worker.StartAsync();
+        try
+        {
+            var until = DateTimeOffset.UtcNow.AddSeconds(30);
+            ScheduleChangeProposal? stored = null;
+            while (DateTimeOffset.UtcNow < until)
+            {
+                await using var scope = factory.Services.CreateAsyncScope();
+                var db = scope.ServiceProvider.GetRequiredService<AgroPlanDbContext>();
+                stored = await db.ScheduleChangeProposals.AsNoTracking().SingleAsync(x => x.Id == proposalId);
+                if (stored.Status == ScheduleChangeProposalStatus.Explained) break;
+                await Task.Delay(150);
+            }
+            Assert.NotNull(stored);
+            Assert.Equal(ScheduleChangeProposalStatus.Explained, stored.Status);
+            Assert.Equal(1, provider.CalendarCalls);
+            using var confirm = await client.PostAsJsonAsync($"/api/farms/{farmId}/crop-cycles/{cycleId}/schedule-change-proposals/{proposalId}/confirm", new { version = 1 });
+            Assert.Equal(HttpStatusCode.OK, confirm.StatusCode);
+        }
+        finally { await worker.StopAsync(); }
+    }
+
     [Fact]
     public async Task Outbox_publishes_jobs_and_workers_persist_safe_missing_data_without_calling_ai()
     {
@@ -125,6 +190,7 @@ public sealed class OutboxAndConsumerTests(PostgreSqlRabbitFixture services)
                 services.AddSingleton<IHostedService, SowingPlanConsumer>();
                 services.AddSingleton<IHostedService, SowingPlanConsumer>();
                 services.AddHostedService<PlantingFrameConsumer>();
+                services.AddHostedService<ScheduleChangeProposalConsumer>();
             })
             .ConfigureLogging((_, logging) => logging.SetMinimumLevel(LogLevel.Warning))
             .Build();
@@ -200,12 +266,32 @@ public sealed class OutboxAndConsumerTests(PostgreSqlRabbitFixture services)
     private sealed class CountingAiProvider : IAiProposalProvider
     {
         private int _calls;
+        private int _calendarCalls;
         public int Calls => Volatile.Read(ref _calls);
+        public int CalendarCalls => Volatile.Read(ref _calendarCalls);
 
         public Task<AiProposalDraft> GenerateDraftAsync(SowingGenerationInput input, CancellationToken cancellationToken)
         {
             Interlocked.Increment(ref _calls);
             return Task.FromResult(new AiProposalDraft("test draft", [], [], "test-model", "test-prompt", "test-schema", DateTimeOffset.UtcNow, "test-provider"));
         }
+
+        public Task<CalendarExplanationDraft> ExplainCalendarChangeAsync(CalendarExplanationInput input, CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref _calendarCalls);
+            return Task.FromResult(new CalendarExplanationDraft("La propuesta reorganiza la tarea según la guía aprobada; revísela y confirme si está de acuerdo.",
+                input.AllowedEvidenceIds.Take(1).ToArray(), "fake", "test-model", "test-prompt", "test-schema", DateTimeOffset.UtcNow));
+        }
+    }
+
+    private static async Task PublishScheduleDuplicateAsync(string rabbitMqUrl, string payload)
+    {
+        var factory = new ConnectionFactory { Uri = new Uri(rabbitMqUrl, UriKind.Absolute) };
+        await using var connection = await factory.CreateConnectionAsync(TestContext.Current.CancellationToken);
+        await using var channel = await connection.CreateChannelAsync(cancellationToken: TestContext.Current.CancellationToken);
+        await RabbitMqPublisher.EnsureScheduleChangesQueueAsync(channel, TestContext.Current.CancellationToken);
+        await channel.BasicPublishAsync(exchange: string.Empty, routingKey: RabbitMqPublisher.ScheduleChangesQueueName, mandatory: true,
+            basicProperties: new BasicProperties { ContentType = "application/json", DeliveryMode = DeliveryModes.Persistent, MessageId = Guid.NewGuid().ToString("N") },
+            body: Encoding.UTF8.GetBytes(payload), cancellationToken: TestContext.Current.CancellationToken);
     }
 }

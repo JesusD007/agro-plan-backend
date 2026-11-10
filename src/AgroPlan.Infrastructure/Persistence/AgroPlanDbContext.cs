@@ -32,6 +32,7 @@ public sealed class AgroPlanDbContext(DbContextOptions<AgroPlanDbContext> option
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
     public DbSet<LogbookEntry> LogbookEntries => Set<LogbookEntry>();
     public DbSet<LogbookAttachment> LogbookAttachments => Set<LogbookAttachment>();
+    public DbSet<ScheduleChangeProposal> ScheduleChangeProposals => Set<ScheduleChangeProposal>();
     public DbSet<ExpenseEntry> ExpenseEntries => Set<ExpenseEntry>();
     public DbSet<IrrigationEntry> IrrigationEntries => Set<IrrigationEntry>();
     public DbSet<InputApplicationEntry> InputApplicationEntries => Set<InputApplicationEntry>();

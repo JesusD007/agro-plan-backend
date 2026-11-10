@@ -8,6 +8,7 @@ public sealed class RabbitMqPublisher(RabbitMqConnection connection)
 {
     public const string QueueName = "agroplan.sowing-plans.v1";
     public const string PlantingFramesQueueName = "agroplan.planting-frames.v1";
+    public const string ScheduleChangesQueueName = "agroplan.schedule-changes.v1";
 
     public async Task PublishAsync(OutboxMessage message, CancellationToken cancellationToken)
     {
@@ -16,7 +17,12 @@ public sealed class RabbitMqPublisher(RabbitMqConnection connection)
             publisherConfirmationsEnabled: true,
             publisherConfirmationTrackingEnabled: true);
         await using var channel = await brokerConnection.CreateChannelAsync(options, cancellationToken);
-        var queueName = message.EventType == "planting-frame.requested" ? PlantingFramesQueueName : QueueName;
+        var queueName = message.EventType switch
+        {
+            "planting-frame.requested" => PlantingFramesQueueName,
+            "schedule-change.requested" => ScheduleChangesQueueName,
+            _ => QueueName
+        };
         await channel.QueueDeclareAsync(queueName, durable: true, exclusive: false, autoDelete: false, arguments: null, cancellationToken: cancellationToken);
 
         var properties = new BasicProperties
@@ -48,5 +54,9 @@ public sealed class RabbitMqPublisher(RabbitMqConnection connection)
 
     public static Task EnsurePlantingFramesQueueAsync(IChannel channel, CancellationToken cancellationToken) =>
         channel.QueueDeclareAsync(PlantingFramesQueueName, durable: true, exclusive: false, autoDelete: false,
+            arguments: null, cancellationToken: cancellationToken);
+
+    public static Task EnsureScheduleChangesQueueAsync(IChannel channel, CancellationToken cancellationToken) =>
+        channel.QueueDeclareAsync(ScheduleChangesQueueName, durable: true, exclusive: false, autoDelete: false,
             arguments: null, cancellationToken: cancellationToken);
 }

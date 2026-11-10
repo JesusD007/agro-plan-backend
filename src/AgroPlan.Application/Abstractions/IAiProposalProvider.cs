@@ -53,4 +53,9 @@ public interface IAiProposalProvider
     Task<AiProposalDraft> GenerateDraftAsync(
         SowingGenerationInput input,
         CancellationToken cancellationToken);
+
+    Task<AgroPlan.Domain.Calendars.CalendarExplanationDraft> ExplainCalendarChangeAsync(
+        AgroPlan.Domain.Calendars.CalendarExplanationInput input,
+        CancellationToken cancellationToken) => Task.FromException<AgroPlan.Domain.Calendars.CalendarExplanationDraft>(
+            new NotSupportedException("This provider does not support calendar explanations."));
 }

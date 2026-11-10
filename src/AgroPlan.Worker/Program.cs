@@ -23,6 +23,7 @@ if (!string.IsNullOrWhiteSpace(rabbitMqUrl))
     builder.Services.AddSingleton<IClimateProvider, UnconfiguredClimateProvider>();
     builder.Services.AddHostedService<SowingPlanConsumer>();
     builder.Services.AddHostedService<PlantingFrameConsumer>();
+    builder.Services.AddHostedService<ScheduleChangeProposalConsumer>();
 }
 else
 {

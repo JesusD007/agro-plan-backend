@@ -31,3 +31,27 @@ public sealed class CropCalendarConfiguration : IEntityTypeConfiguration<CropCal
             .HasForeignKey(template => template.CropCatalogEntryId).OnDelete(DeleteBehavior.Restrict);
     }
 }
+
+public sealed class ScheduleChangeProposalConfiguration : IEntityTypeConfiguration<ScheduleChangeProposal>
+{
+    public void Configure(EntityTypeBuilder<ScheduleChangeProposal> builder)
+    {
+        builder.ToTable("schedule_change_proposals", "agro");
+        builder.HasKey(x => x.Id);
+        builder.HasAlternateKey(x => new { x.FarmId, x.Id });
+        builder.Property(x => x.EvidenceVersion).HasMaxLength(200).IsRequired();
+        builder.Property(x => x.DeltasJson).HasColumnType("jsonb").IsRequired();
+        builder.Property(x => x.EvidenceIdsJson).HasColumnType("jsonb").IsRequired();
+        builder.Property(x => x.ExplanationJson).HasColumnType("jsonb");
+        builder.Property(x => x.ExplanationProvider).HasMaxLength(80);
+        builder.Property(x => x.ExplanationModel).HasMaxLength(160);
+        builder.Property(x => x.ExplanationPromptVersion).HasMaxLength(80);
+        builder.Property(x => x.ExplanationSchemaVersion).HasMaxLength(80);
+        builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(24).IsRequired();
+        builder.Property(x => x.FailureCode).HasMaxLength(100);
+        builder.Ignore(x => x.Deltas);
+        builder.Ignore(x => x.EvidenceIds);
+        builder.HasIndex(x => new { x.FarmId, x.CropCycleId, x.CreatedAt });
+        builder.HasIndex(x => new { x.Status, x.ExpiresAt });
+    }
+}
