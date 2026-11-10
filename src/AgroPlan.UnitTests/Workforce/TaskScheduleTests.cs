@@ -48,4 +48,13 @@ public sealed class TaskScheduleTests
         Assert.Equal(new DateOnly(2026, 11, 10), revision.ProposedDate);
         Assert.Throws<InvalidOperationException>(() => revision.Confirm("admin", DateTimeOffset.UtcNow, 2));
     }
+
+    [Fact]
+    public void Calendar_adapter_contract_and_per_event_delivery_status_are_available()
+    {
+        var applicationAssembly = typeof(WorkTaskImpactProjector).Assembly;
+        var domainAssembly = typeof(WorkTask).Assembly;
+        Assert.NotNull(applicationAssembly.GetType("AgroPlan.Application.Abstractions.IExternalWorkCalendar"));
+        Assert.NotNull(domainAssembly.GetType("AgroPlan.Domain.Workforce.CalendarDeliveryStatus"));
+    }
 }
