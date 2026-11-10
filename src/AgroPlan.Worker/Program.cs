@@ -19,7 +19,7 @@ if (!string.IsNullOrWhiteSpace(rabbitMqUrl))
         throw new InvalidOperationException("Configure ConnectionStrings__AgroPlan when RABBITMQ_URL is enabled.");
     builder.Services.AddDbContext<AgroPlanDbContext>(options => options.UseNpgsql(connectionString));
     builder.Services.AddSingleton<RabbitMqConnection>();
-    builder.Services.AddSingleton<IGeminiProposalProvider, GeminiProposalProvider>();
+    builder.Services.AddSingleton<IAiProposalProvider, GeminiProposalProvider>();
     builder.Services.AddSingleton<IClimateProvider, UnconfiguredClimateProvider>();
     builder.Services.AddHostedService<SowingPlanConsumer>();
     builder.Services.AddHostedService<PlantingFrameConsumer>();

@@ -14,7 +14,7 @@ namespace AgroPlan.Worker.AI;
 
 public sealed class GeminiProposalProvider(
     IConfiguration configuration,
-    ILogger<GeminiProposalProvider> logger) : IGeminiProposalProvider
+    ILogger<GeminiProposalProvider> logger) : IAiProposalProvider
 {
     public const string PromptVersion = "sowing-draft-v1";
     public const string SchemaVersion = "sowing-json-v1";
@@ -24,7 +24,7 @@ public sealed class GeminiProposalProvider(
     private DateTimeOffset? circuitOpenUntil;
     private bool halfOpenProbeInFlight;
 
-    public async Task<GeminiProposalDraft> GenerateDraftAsync(
+    public async Task<AiProposalDraft> GenerateDraftAsync(
         SowingGenerationInput input,
         CancellationToken cancellationToken)
     {
@@ -84,7 +84,7 @@ public sealed class GeminiProposalProvider(
                     .FirstOrDefault()?.Text;
                 var generated = ValidateResponse(json, input);
                 RecordSuccess();
-                return new GeminiProposalDraft(generated.Summary, generated.SourceIds, generated.MissingInputs,
+                return new AiProposalDraft(generated.Summary, generated.SourceIds, generated.MissingInputs,
                     model, PromptVersion, SchemaVersion, DateTimeOffset.UtcNow);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -216,6 +216,11 @@ public sealed class GeminiProposalProvider(
         IReadOnlyList<string> SourceIds);
 }
 
-public sealed class GeminiConfigurationException(string message) : Exception(message);
-public sealed class GeminiCircuitOpenException(string message) : Exception(message);
-public sealed class GeminiProviderException(string message, Exception? innerException = null) : Exception(message, innerException);
+public sealed class GeminiConfigurationException(string message)
+    : AiProposalProviderException(AiProposalProviderFailureKind.NotConfigured, message);
+
+public sealed class GeminiCircuitOpenException(string message)
+    : AiProposalProviderException(AiProposalProviderFailureKind.TemporarilyUnavailable, message);
+
+public sealed class GeminiProviderException(string message, Exception? innerException = null)
+    : AiProposalProviderException(AiProposalProviderFailureKind.GenerationFailed, message, innerException);

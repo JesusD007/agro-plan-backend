@@ -13,7 +13,7 @@ tech-stack:
 key-files:
   created:
     - src/AgroPlan.Application/Abstractions/IClimateProvider.cs
-    - src/AgroPlan.Application/Abstractions/IGeminiProposalProvider.cs
+    - src/AgroPlan.Application/Abstractions/IAiProposalProvider.cs
     - src/AgroPlan.Application/UseCases/ConfirmProposal.cs
     - src/AgroPlan.Worker/AI/GeminiProposalProvider.cs
     - src/AgroPlan.Worker/Climate/UnconfiguredClimateProvider.cs

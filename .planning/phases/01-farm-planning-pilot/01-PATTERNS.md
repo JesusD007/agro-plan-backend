@@ -21,7 +21,7 @@
 | `src/AgroPlan.Api/Hubs/JobStatusHub.cs` | hub/middleware | streaming/event notification | None | no analog |
 | `src/AgroPlan.Application/Abstractions/IFarmAuthorization.cs` | service contract | request-response | None | no analog |
 | `src/AgroPlan.Application/Abstractions/IClimateProvider.cs` | provider contract | request-response | None | no analog |
-| `src/AgroPlan.Application/Abstractions/IGeminiProposalProvider.cs` | provider contract | request-response | None | no analog |
+| `src/AgroPlan.Application/Abstractions/IAiProposalProvider.cs` | provider-neutral AI contract | request-response | None | no analog |
 | `src/AgroPlan.Application/Abstractions/IFileStorage.cs` | provider contract | file-I/O | None | no analog |
 | `src/AgroPlan.Application/UseCases/SubmitSowingPlan.cs` | use case/service | request-response, event-driven job creation | None | no analog |
 | `src/AgroPlan.Application/UseCases/SubmitPlantingFrameProposal.cs` | use case/service | request-response, event-driven job creation | None | no analog |

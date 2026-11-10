@@ -23,7 +23,7 @@ public sealed record SowingGenerationInput(
     IReadOnlyList<ValidatedAgronomicInput> ValidatedParameters,
     ClimateContext Climate);
 
-public sealed record GeminiProposalDraft(
+public sealed record AiProposalDraft(
     string Summary,
     IReadOnlyList<string> SourceIds,
     IReadOnlyList<string> MissingInputs,
@@ -32,9 +32,24 @@ public sealed record GeminiProposalDraft(
     string SchemaVersion,
     DateTimeOffset GeneratedAt);
 
-public interface IGeminiProposalProvider
+public enum AiProposalProviderFailureKind
 {
-    Task<GeminiProposalDraft> GenerateDraftAsync(
+    NotConfigured,
+    TemporarilyUnavailable,
+    GenerationFailed
+}
+
+public class AiProposalProviderException(
+    AiProposalProviderFailureKind failureKind,
+    string message,
+    Exception? innerException = null) : Exception(message, innerException)
+{
+    public AiProposalProviderFailureKind FailureKind { get; } = failureKind;
+}
+
+public interface IAiProposalProvider
+{
+    Task<AiProposalDraft> GenerateDraftAsync(
         SowingGenerationInput input,
         CancellationToken cancellationToken);
 }

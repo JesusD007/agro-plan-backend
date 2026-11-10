@@ -17,7 +17,7 @@ public sealed class SowingPlanConsumer(
     RabbitMqConnection connection,
     IServiceScopeFactory scopeFactory,
     IClimateProvider climateProvider,
-    IGeminiProposalProvider geminiProvider,
+    IAiProposalProvider aiProvider,
     ILogger<SowingPlanConsumer> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -202,7 +202,7 @@ public sealed class SowingPlanConsumer(
                 return;
             }
 
-            var draft = await geminiProvider.GenerateDraftAsync(input, cancellationToken);
+            var draft = await aiProvider.GenerateDraftAsync(input, cancellationToken);
             var resultMissingInputs = missingInputs.Concat(draft.MissingInputs).Distinct(StringComparer.Ordinal).ToArray();
             var sourceIds = draft.SourceIds.Distinct(StringComparer.Ordinal).ToArray();
             var result = JsonSerializer.Serialize(new
@@ -235,19 +235,18 @@ public sealed class SowingPlanConsumer(
                     .SetProperty(item => item.StatusVersion, item => item.StatusVersion + 1), CancellationToken.None);
             throw;
         }
-        catch (GeminiConfigurationException)
+        catch (AiProposalProviderException exception)
         {
-            proposal.MarkFailed("GEMINI_NOT_CONFIGURED", "Draft generation is not configured; no agronomic guidance was generated.", DateTimeOffset.UtcNow);
-            await dbContext.SaveChangesAsync(cancellationToken);
-        }
-        catch (GeminiCircuitOpenException)
-        {
-            proposal.MarkFailed("GEMINI_TEMPORARILY_UNAVAILABLE", "Draft generation is temporarily unavailable.", DateTimeOffset.UtcNow);
-            await dbContext.SaveChangesAsync(cancellationToken);
-        }
-        catch (GeminiProviderException)
-        {
-            proposal.MarkFailed("GEMINI_GENERATION_FAILED", "A safe draft could not be generated; no agronomic guidance was saved.", DateTimeOffset.UtcNow);
+            var (code, safeMessage) = exception.FailureKind switch
+            {
+                AiProposalProviderFailureKind.NotConfigured =>
+                    ("AI_NOT_CONFIGURED", "Draft generation is not configured; no agronomic guidance was generated."),
+                AiProposalProviderFailureKind.TemporarilyUnavailable =>
+                    ("AI_TEMPORARILY_UNAVAILABLE", "Draft generation is temporarily unavailable."),
+                _ =>
+                    ("AI_GENERATION_FAILED", "A safe draft could not be generated; no agronomic guidance was saved.")
+            };
+            proposal.MarkFailed(code, safeMessage, DateTimeOffset.UtcNow);
             await dbContext.SaveChangesAsync(cancellationToken);
         }
         catch (Exception exception)
