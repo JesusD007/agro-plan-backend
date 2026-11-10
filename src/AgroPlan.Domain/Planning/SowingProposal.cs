@@ -4,7 +4,8 @@ public enum SowingProposalStatus
 {
     Pending = 0,
     Completed = 1,
-    Failed = 2
+    Failed = 2,
+    Confirmed = 3
 }
 
 public sealed class SowingProposal
@@ -51,6 +52,8 @@ public sealed class SowingProposal
     public DateTimeOffset StatusChangedAt { get; private set; }
     public long StatusVersion { get; private set; }
     public long NotifiedStatusVersion { get; private set; }
+    public string? ConfirmedByUserId { get; private set; }
+    public DateTimeOffset? ConfirmedAt { get; private set; }
 
     public void MarkCompleted(string resultJson, DateTimeOffset completedAt)
     {
@@ -70,6 +73,15 @@ public sealed class SowingProposal
         FailureCode = code.Trim();
         FailureSummary = summary.Trim();
         SetStatus(SowingProposalStatus.Failed, failedAt);
+    }
+
+    public bool Confirm(string userId, DateTimeOffset confirmedAt)
+    {
+        if (Status != SowingProposalStatus.Completed || string.IsNullOrWhiteSpace(userId)) return false;
+        ConfirmedByUserId = userId.Trim();
+        ConfirmedAt = confirmedAt;
+        SetStatus(SowingProposalStatus.Confirmed, confirmedAt);
+        return true;
     }
 
     public void MarkStatusNotified(long version)

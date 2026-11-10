@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.ComponentModel.DataAnnotations;
 using AgroPlan.Api.Authorization;
+using AgroPlan.Application.Abstractions;
 using AgroPlan.Application.UseCases;
 using AgroPlan.Domain.Planning;
 using AgroPlan.Infrastructure.Persistence;
@@ -13,7 +14,11 @@ namespace AgroPlan.Api.Controllers;
 [ApiController]
 [Route("api/farms/{farmId:guid}/planning-jobs")]
 [Authorize(Policy = FarmMembershipRequirement.PolicyName)]
-public sealed class PlanningJobsController(AgroPlanDbContext dbContext, SubmitSowingPlan submitSowingPlan) : ControllerBase
+public sealed class PlanningJobsController(
+    AgroPlanDbContext dbContext,
+    SubmitSowingPlan submitSowingPlan,
+    ConfirmProposal confirmProposal,
+    IFarmAuthorization farmAuthorization) : ControllerBase
 {
     [HttpPost("sowing-plans")]
     public async Task<ActionResult<SowingJobResponse>> SubmitSowingPlan(
@@ -67,6 +72,26 @@ public sealed class PlanningJobsController(AgroPlanDbContext dbContext, SubmitSo
         return proposal is null ? NotFound() : Ok(ToResponse(proposal));
     }
 
+    [HttpPost("{jobId:guid}/confirm")]
+    public async Task<IActionResult> Confirm(Guid farmId, Guid jobId, CancellationToken cancellationToken)
+    {
+        var userId = User.FindFirstValue("sub") ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
+        var role = await farmAuthorization.GetActiveRoleAsync(farmId, userId, cancellationToken);
+        if (role is not (AgroPlan.Domain.Farms.FarmRole.Owner or AgroPlan.Domain.Farms.FarmRole.Administrator))
+            return Forbid();
+
+        var proposal = await dbContext.SowingProposals.SingleOrDefaultAsync(
+            item => item.FarmId == farmId && item.Id == jobId, cancellationToken);
+        if (proposal is null) return NotFound();
+        var result = confirmProposal.Execute(proposal, userId, DateTimeOffset.UtcNow);
+        if (result == ProposalConfirmationResult.NotReady)
+            return Conflict(new { code = "PROPOSAL_INCOMPLETE", message = "The draft has missing inputs or lacks current climate and validated agronomic sources; it cannot be confirmed." });
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return Ok(ToResponse(proposal));
+    }
+
     private static SowingJobResponse ToResponse(SowingProposal proposal) => new(
         proposal.Id,
         proposal.FarmId,
@@ -74,6 +99,7 @@ public sealed class PlanningJobsController(AgroPlanDbContext dbContext, SubmitSo
         proposal.Status.ToString().ToLowerInvariant(),
         proposal.FailureCode,
         proposal.FailureSummary,
+        proposal.ResultJson,
         proposal.CreatedAt,
         proposal.UpdatedAt);
 }
@@ -87,5 +113,6 @@ public sealed record SowingJobResponse(
     string Status,
     string? FailureCode,
     string? FailureSummary,
+    string? ResultJson,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt);

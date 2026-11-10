@@ -102,6 +102,7 @@ builder.Services.AddScoped<IFarmAuthorization, FarmAuthorizationService>();
 builder.Services.AddScoped<ICropCatalogRepository, CropCatalogRepository>();
 builder.Services.AddScoped<CropCatalogService>();
 builder.Services.AddScoped<SubmitSowingPlan>();
+builder.Services.AddScoped<ConfirmProposal>();
 builder.Services.AddRateLimiter(options =>
 {
     options.AddPolicy("identity", httpContext => RateLimitPartition.GetFixedWindowLimiter(

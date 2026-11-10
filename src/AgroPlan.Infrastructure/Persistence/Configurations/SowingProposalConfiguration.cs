@@ -19,6 +19,7 @@ public sealed class SowingProposalConfiguration : IEntityTypeConfiguration<Sowin
         builder.Property(proposal => proposal.Status).HasConversion<string>().HasMaxLength(24).IsRequired();
         builder.Property(proposal => proposal.FailureCode).HasMaxLength(80);
         builder.Property(proposal => proposal.FailureSummary).HasMaxLength(400);
+        builder.Property(proposal => proposal.ConfirmedByUserId).HasMaxLength(450);
         builder.Property(proposal => proposal.StatusVersion).IsConcurrencyToken();
         builder.Property(proposal => proposal.CreatedAt).IsRequired();
         builder.Property(proposal => proposal.UpdatedAt).IsRequired();
