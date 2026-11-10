@@ -544,18 +544,18 @@ Each documented requirement is assigned to exactly one roadmap phase. The six pi
 | REQ-pilot-api-docs | Phase 1: Farm Planning Pilot | Complete (Development OpenAPI/Scalar available; routes absent in Production) |
 | REQ-pilot-provider-neutral-ai | Phase 1: Farm Planning Pilot | Complete (IAiProposalProvider contract; Gemini is the current adapter) |
 | REQ-rf-g-02 | Phase 2: Farm Operations and Safety | Complete |
-| REQ-rf-g-03 | Phase 2: Farm Operations and Safety | Pending |
+| REQ-rf-g-03 | Phase 2: Farm Operations and Safety | Complete |
 | REQ-rf-g-04 | Phase 2: Farm Operations and Safety | Complete |
 | REQ-rf-g-07 | Phase 2: Farm Operations and Safety | Complete |
 | REQ-rf-g-08 | Phase 2: Farm Operations and Safety | Complete |
 | REQ-rf-g-13 | Phase 2: Farm Operations and Safety | Pending |
-| REQ-rf-g-15 | Phase 2: Farm Operations and Safety | Pending |
+| REQ-rf-g-15 | Phase 2: Farm Operations and Safety | Complete |
 | REQ-rf-g-31 | Phase 2: Farm Operations and Safety | Complete |
 | REQ-rf-g-32 | Phase 2: Farm Operations and Safety | Complete |
 | REQ-rf-g-33 | Phase 2: Farm Operations and Safety | Complete |
 | REQ-rf-g-34 | Phase 2: Farm Operations and Safety | Complete |
 | REQ-rf-g-35 | Phase 2: Farm Operations and Safety | Complete |
-| REQ-rf-g-36 | Phase 2: Farm Operations and Safety | Pending |
+| REQ-rf-g-36 | Phase 2: Farm Operations and Safety | Complete |
 | REQ-rf-g-37 | Phase 2: Farm Operations and Safety | Pending |
 | REQ-rf-g-42 | Phase 2: Farm Operations and Safety | Complete |
 | REQ-rf-g-06 | Phase 3: Workforce and Offline Operations | Pending |
