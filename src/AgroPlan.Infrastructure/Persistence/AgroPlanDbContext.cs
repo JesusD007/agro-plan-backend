@@ -11,6 +11,9 @@ public sealed class AgroPlanDbContext(DbContextOptions<AgroPlanDbContext> option
 {
     public DbSet<Farm> Farms => Set<Farm>();
     public DbSet<FarmMembership> FarmMemberships => Set<FarmMembership>();
+    public DbSet<RefreshSession> RefreshSessions => Set<RefreshSession>();
+    public DbSet<RecoveryRequest> RecoveryRequests => Set<RecoveryRequest>();
+    public DbSet<RecoveryAuditEntry> RecoveryAuditEntries => Set<RecoveryAuditEntry>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

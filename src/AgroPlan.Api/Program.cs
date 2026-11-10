@@ -2,6 +2,8 @@ using AgroPlan.Api.Authorization;
 using AgroPlan.Api.Identity;
 using AgroPlan.Infrastructure.Identity;
 using AgroPlan.Infrastructure.Persistence;
+using AgroPlan.Application.Abstractions;
+using AgroPlan.Infrastructure.Email;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
@@ -33,10 +35,22 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
         options.Lockout.MaxFailedAccessAttempts = 5;
         options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
     })
+    .AddRoles<IdentityRole>()
     .AddEntityFrameworkStores<AgroPlanDbContext>()
-    .AddSignInManager();
+    .AddSignInManager()
+    .AddDefaultTokenProviders();
 
 builder.Services.AddSingleton(new TokenIssuer(signingKey, issuer, audience));
+builder.Services.AddScoped<RefreshSessionService>();
+builder.Services.AddSingleton<IEmailSender, ConfiguredEmailSender>();
+builder.Services.AddScoped<RecoveryService>(services => new RecoveryService(
+    services.GetRequiredService<AgroPlanDbContext>(),
+    services.GetRequiredService<UserManager<ApplicationUser>>(),
+    services.GetRequiredService<IEmailSender>(),
+    services.GetRequiredService<RefreshSessionService>(),
+    builder.Configuration,
+    signingKey,
+    services.GetRequiredService<ILogger<RecoveryService>>()));
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -51,7 +65,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             IssuerSigningKey = new SymmetricSecurityKey(signingKey),
             ValidateLifetime = true,
             ClockSkew = TimeSpan.FromSeconds(30),
-            NameClaimType = "sub"
+            NameClaimType = "sub",
+            RoleClaimType = "role"
         };
     });
 
@@ -72,6 +87,15 @@ builder.Services.AddRateLimiter(options =>
         {
             PermitLimit = 10,
             Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0,
+            AutoReplenishment = true
+        }));
+    options.AddPolicy("recovery", httpContext => RateLimitPartition.GetFixedWindowLimiter(
+        httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown-client",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 10,
+            Window = TimeSpan.FromHours(1),
             QueueLimit = 0,
             AutoReplenishment = true
         }));

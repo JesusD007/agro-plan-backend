@@ -13,7 +13,7 @@ public sealed class TokenIssuer(byte[] signingKey, string issuer, string audienc
     public const string Audience = "AgroPlan.Client";
     private static readonly TimeSpan AccessTokenLifetime = TimeSpan.FromMinutes(15);
 
-    public string Issue(ApplicationUser user, DateTimeOffset now)
+    public string Issue(ApplicationUser user, DateTimeOffset now, IEnumerable<string>? roles = null)
     {
         var header = new Dictionary<string, string> { ["alg"] = "HS256", ["typ"] = "JWT" };
         var payload = new Dictionary<string, object>
@@ -27,6 +27,8 @@ public sealed class TokenIssuer(byte[] signingKey, string issuer, string audienc
         };
 
         if (!string.IsNullOrWhiteSpace(user.Email)) payload["email"] = user.Email;
+        var roleList = roles?.Distinct(StringComparer.Ordinal).ToArray() ?? [];
+        if (roleList.Length > 0) payload["role"] = roleList;
         var encodedHeader = Base64UrlEncoder.Encode(JsonSerializer.SerializeToUtf8Bytes(header));
         var encodedPayload = Base64UrlEncoder.Encode(JsonSerializer.SerializeToUtf8Bytes(payload));
         var unsignedToken = $"{encodedHeader}.{encodedPayload}";
