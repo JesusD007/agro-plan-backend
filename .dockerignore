@@ -1,0 +1,9 @@
+.git
+.planning
+.agents
+.codex
+**/bin
+**/obj
+**/.vs
+**/secrets
+**/appsettings.*.json
