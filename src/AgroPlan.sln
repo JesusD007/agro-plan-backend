@@ -1,0 +1,42 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgroPlan.Domain", "AgroPlan.Domain\AgroPlan.Domain.csproj", "{AE731EF0-01B7-4BE9-9378-AEF08B327DA9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgroPlan.Application", "AgroPlan.Application\AgroPlan.Application.csproj", "{8553D63E-C82D-4EC4-AC22-2878EF75074B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgroPlan.Infrastructure", "AgroPlan.Infrastructure\AgroPlan.Infrastructure.csproj", "{BC91395B-2577-447E-BBCF-A1317E42E47B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgroPlan.Api", "AgroPlan.Api\AgroPlan.Api.csproj", "{FC47E1C6-B24A-4D97-BB0D-477CC30CF27B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgroPlan.Worker", "AgroPlan.Worker\AgroPlan.Worker.csproj", "{CEDD9992-6B9F-4B16-A4C8-3465E80DAC54}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{AE731EF0-01B7-4BE9-9378-AEF08B327DA9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AE731EF0-01B7-4BE9-9378-AEF08B327DA9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AE731EF0-01B7-4BE9-9378-AEF08B327DA9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AE731EF0-01B7-4BE9-9378-AEF08B327DA9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8553D63E-C82D-4EC4-AC22-2878EF75074B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8553D63E-C82D-4EC4-AC22-2878EF75074B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8553D63E-C82D-4EC4-AC22-2878EF75074B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8553D63E-C82D-4EC4-AC22-2878EF75074B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BC91395B-2577-447E-BBCF-A1317E42E47B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BC91395B-2577-447E-BBCF-A1317E42E47B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BC91395B-2577-447E-BBCF-A1317E42E47B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BC91395B-2577-447E-BBCF-A1317E42E47B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FC47E1C6-B24A-4D97-BB0D-477CC30CF27B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FC47E1C6-B24A-4D97-BB0D-477CC30CF27B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FC47E1C6-B24A-4D97-BB0D-477CC30CF27B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FC47E1C6-B24A-4D97-BB0D-477CC30CF27B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CEDD9992-6B9F-4B16-A4C8-3465E80DAC54}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CEDD9992-6B9F-4B16-A4C8-3465E80DAC54}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CEDD9992-6B9F-4B16-A4C8-3465E80DAC54}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CEDD9992-6B9F-4B16-A4C8-3465E80DAC54}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

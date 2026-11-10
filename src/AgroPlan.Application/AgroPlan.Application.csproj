@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\AgroPlan.Domain\AgroPlan.Domain.csproj" />
+  </ItemGroup>
+</Project>
