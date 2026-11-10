@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 3
 current_phase_name: Workforce and Offline Operations
 status: executing
-stopped_at: Completed 03-01-PLAN.md
-last_updated: "2026-11-10T20:49:00.544Z"
+stopped_at: Completed 03-02-PLAN.md
+last_updated: "2026-11-10T21:26:16.499Z"
 last_activity: 2026-11-10
 last_activity_desc: Phase 3 execution started
-state_head: 48b464fa54b3d92a46db2cc20bb41c93bdc0f1b4
+state_head: d2a6193c197dd574e9b3a914304ee714675a669e
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 27
-  completed_plans: 21
+  completed_plans: 22
   percent: 33
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-11-09)
 ## Current Position
 
 Phase: 3 (Workforce and Offline Operations) — EXECUTING
-Plan: 2 of 7
+Plan: 3 of 7
 Status: Ready to execute
 Last activity: 2026-11-10 — Phase 3 execution started
 
@@ -63,6 +63,7 @@ Progress: ████████░░ [███░░░░░░░] 33%
 | Phase 2 P7 | 20min | 2 tasks | 12 files |
 | Phase 02 P08 | 22m | 2 tasks | 16 files |
 | Phase 03 P01 | 25min | 2 tasks | 11 files |
+| Phase 03 P02 | 23 min | 3 tasks | 28 files |
 
 ## Accumulated Context
 
@@ -94,6 +95,9 @@ Progress: ████████░░ [███░░░░░░░] 33%
 - [Phase 03]: Worker invitations use SHA-256 token digests, seven-day expiry, and verified normalized-email matching.
 - [Phase 03]: Basic worker capacity counts active Workers plus pending invitations; Premium entitlement is trusted server-provisioned state.
 - [Phase 03]: Invitation issue and renewal require a configured HTTPS client acceptance URL.
+- [Phase 03]: Revalidate active farm membership and assigned-worker scope from PostgreSQL on each task, evidence, and history request.
+- [Phase 03]: Store location and captured time only with explicit worker consent; correction evidence is a new linked revision and prior evidence remains available.
+- [Phase 03]: Create one wage-history record only after owner/administrator approval; do not initiate payment.
 
 ### Pending Todos
 
@@ -112,6 +116,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-10T20:48:59.418Z
-Stopped at: Completed 03-01-PLAN.md
-Resume file: 03-02-PLAN.md
+Last session: 2026-11-10T21:26:15.336Z
+Stopped at: Completed 03-02-PLAN.md
+Resume file: 03-03-PLAN.md
