@@ -3,15 +3,15 @@ gsd_state_version: "1.0"
 current_phase: 01
 current_phase_name: Farm Planning Pilot
 status: executing
-stopped_at: Completed 01-03-PLAN.md
-last_updated: "2026-11-10T04:16:16.307Z"
+stopped_at: Completed 01-04-PLAN.md
+last_updated: "2026-11-10T04:28:17.994Z"
 last_activity: 2026-11-10
-state_head: 8c22fae867cd5337a82a02574edb3bb44ac06dca
+state_head: 12c56d99b2f56f43c5e7775c7b3ce9f4df4a8d2c
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 8
-  completed_plans: 3
+  completed_plans: 4
   percent: 0
 last_activity_desc: Initialized planning from the approved document set.
 ---
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-11-09)
 ## Current Position
 
 Phase: 01 (Farm Planning Pilot) — READY TO EXECUTE
-Plan: 4 of 8 in current phase
+Plan: 5 of 8 in current phase
 Status: Ready to execute
 Last activity: 2026-11-10
 
@@ -48,6 +48,7 @@ Progress: ░░░░░░░░░░ [░░░░░░░░░░] 0%
 | Phase 01 P01 | 13m | 2 tasks | 13 files |
 | Phase 01 P02 | 18m | 2 tasks | 17 files |
 | Phase 01 P03 | 28m | 2 tasks | 16 files |
+| Phase 01 P04 | 9m | 2 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -63,6 +64,7 @@ Progress: ░░░░░░░░░░ [░░░░░░░░░░] 0%
 - [Phase 01]: Account recovery requires email verification followed by audited Support-role review; reset revokes all refresh sessions.
 - [Phase 01]: Only farm owners can grant or revoke farm-administrator membership; each change creates an audit record.
 - [Phase 01]: Parcel queries and relationships are scoped by farm id; membership authorization is re-read from PostgreSQL per request.
+- [Phase 01]: Pilot crop catalog seeds only user-approved crop identities and exposes missing agronomic inputs; no numeric values are invented.
 
 ### Pending Todos
 
@@ -81,6 +83,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-10T04:16:14.761Z
-Stopped at: Completed 01-03-PLAN.md
-Resume file: .planning/phases/01-farm-planning-pilot/01-04-PLAN.md
+Last session: 2026-11-10T04:28:17.950Z
+Stopped at: Completed 01-04-PLAN.md
+Resume file: .planning/phases/01-farm-planning-pilot/01-05-PLAN.md
