@@ -26,7 +26,14 @@ Deliver AgroPlan's farm-scoped backend pilot first, then expand into farm operat
   2. A producer can request a sowing proposal with climate review, inspect its factors and uncertainty, and explicitly confirm it before it becomes saved data.
   3. A producer can compare planting-frame options whose capacity is calculated by deterministic rules and select one with an explicit confirmation.
   4. An authorized producer can add and correct manual logbook entries while preserving the correction history.
-**Plans**: TBD
+**Plans:** 5 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — .NET skeleton, account lifecycle, and farm authorization
+- [ ] 01-02-PLAN.md — Pilot crop catalog and farm crop cycles
+- [ ] 01-03-PLAN.md — Asynchronous sowing proposal with Gemini and climate contract
+- [ ] 01-04-PLAN.md — Deterministic planting-frame proposals and confirmation
+- [ ] 01-05-PLAN.md — Immutable manual logbook and optional photo uploads
 
 ### Phase 2: Farm Operations and Safety
 **Goal**: A producer can maintain operational records and use them to make safer, better-informed farm decisions.
