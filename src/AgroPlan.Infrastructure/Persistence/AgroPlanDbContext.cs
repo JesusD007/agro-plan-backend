@@ -1,4 +1,5 @@
 using AgroPlan.Domain.Farms;
+using AgroPlan.Domain.Crops;
 using AgroPlan.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -16,6 +17,8 @@ public sealed class AgroPlanDbContext(DbContextOptions<AgroPlanDbContext> option
     public DbSet<RefreshSession> RefreshSessions => Set<RefreshSession>();
     public DbSet<RecoveryRequest> RecoveryRequests => Set<RecoveryRequest>();
     public DbSet<RecoveryAuditEntry> RecoveryAuditEntries => Set<RecoveryAuditEntry>();
+    public DbSet<CropCatalogEntry> CropCatalogEntries => Set<CropCatalogEntry>();
+    public DbSet<AgronomicParameter> AgronomicParameters => Set<AgronomicParameter>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

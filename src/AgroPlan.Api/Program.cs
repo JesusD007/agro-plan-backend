@@ -2,6 +2,7 @@ using AgroPlan.Api.Authorization;
 using AgroPlan.Api.Identity;
 using AgroPlan.Infrastructure.Identity;
 using AgroPlan.Infrastructure.Persistence;
+using AgroPlan.Application.Crops;
 using AgroPlan.Application.Abstractions;
 using AgroPlan.Infrastructure.Email;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -80,6 +81,8 @@ builder.Services.AddAuthorization(options =>
 });
 builder.Services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, FarmMembershipAuthorizationHandler>();
 builder.Services.AddScoped<IFarmAuthorization, FarmAuthorizationService>();
+builder.Services.AddScoped<ICropCatalogRepository, CropCatalogRepository>();
+builder.Services.AddScoped<CropCatalogService>();
 builder.Services.AddRateLimiter(options =>
 {
     options.AddPolicy("identity", httpContext => RateLimitPartition.GetFixedWindowLimiter(
