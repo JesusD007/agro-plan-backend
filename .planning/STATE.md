@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 2
 current_phase_name: Farm Operations and Safety
 status: executing
-stopped_at: Completed 02-01-PLAN.md
-last_updated: "2026-11-10T13:35:02.559Z"
+stopped_at: Completed 02-02-PLAN.md
+last_updated: "2026-11-10T13:50:20.698Z"
 last_activity: 2026-11-10
 last_activity_desc: Phase 2 execution started
-state_head: 64c8bea95259173e9c5902dfe202ecb78ae4ade6
+state_head: 253a4deba8c9d197a7416c3715e1e870993784fa
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 20
-  completed_plans: 13
+  completed_plans: 14
   percent: 17
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-11-09)
 ## Current Position
 
 Phase: 2 (Farm Operations and Safety) — EXECUTING
-Plan: 2 of 8
+Plan: 3 of 8
 Status: Ready to execute
 Last activity: 2026-11-10 — Phase 2 execution started
 
@@ -54,6 +54,7 @@ Progress: ████████░░ [██░░░░░░░░] 17%
 | Phase 01 P07 | 12m | 2 tasks | 17 files |
 | Phase 01 P08 | 50min | 2 tasks | 17 files |
 | Phase 2 P1 | 9m | 2 tasks | 9 files |
+| Phase 2 P02 | 8min | 2 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -74,6 +75,8 @@ Progress: ████████░░ [██░░░░░░░░] 17%
 - [Phase 01]: Use official Google.GenAI 1.28.0 with server-side credentials; climate remains unavailable until a source is selected and validated, and incomplete drafts cannot be confirmed.
 - [Phase 01]: Calculate planting-frame capacity only from currently valid, sourced spacing rules and validated usable parcel geometry; missing inputs suppress estimates, and owner/administrator confirmation persists the selected frame.
 - [Phase 01]: Use AWS SDK S3 SigV4 for Supabase direct uploads to meet the ten-minute expiry; keep keys server-side and require a private, size-limited bucket.
+- [Phase 2]: Application-frequency assessments use only one exact, current, validated product/crop/use/jurisdiction rule; otherwise the API returns unavailable.
+- [Phase 2]: Client-supplied PHI cannot authorize harvest; exact label evidence is evaluated by the harvest-safety workflow.
 
 ### Pending Todos
 
@@ -92,6 +95,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-10T13:35:02.375Z
-Stopped at: Completed 02-01-PLAN.md
+Last session: 2026-11-10T13:50:20.526Z
+Stopped at: Completed 02-02-PLAN.md
 Resume file: None
