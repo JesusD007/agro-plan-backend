@@ -14,6 +14,20 @@ namespace AgroPlan.Api.Controllers;
 [Authorize]
 public sealed class FarmsController(AgroPlanDbContext dbContext) : ControllerBase
 {
+    [HttpGet]
+    public async Task<ActionResult<IReadOnlyList<FarmResponse>>> List(CancellationToken cancellationToken)
+    {
+        var userId = User.FindFirstValue("sub") ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
+        var farms = await dbContext.Farms.AsNoTracking()
+            .Where(farm => farm.Memberships.Any(membership => membership.UserId == userId && membership.IsActive &&
+                (membership.Role == FarmRole.Owner || membership.Role == FarmRole.Administrator)))
+            .OrderBy(farm => farm.Name)
+            .Select(farm => new FarmResponse(farm.Id, farm.Name, farm.Location, farm.CreatedAt))
+            .ToListAsync(cancellationToken);
+        return Ok(farms);
+    }
+
     [HttpPost]
     public async Task<ActionResult<FarmResponse>> Create(CreateFarmRequest request, CancellationToken cancellationToken)
     {
@@ -46,9 +60,51 @@ public sealed class FarmsController(AgroPlanDbContext dbContext) : ControllerBas
             .SingleOrDefaultAsync(cancellationToken);
         return farm is null ? NotFound() : Ok(farm);
     }
+
+    [HttpPut("{farmId:guid}")]
+    [Authorize(Policy = FarmMembershipRequirement.PolicyName)]
+    public async Task<ActionResult<FarmResponse>> Update(Guid farmId, UpdateFarmRequest request, CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid) return ValidationProblem(ModelState);
+        var userId = User.FindFirstValue("sub") ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
+        var farm = await dbContext.Farms.SingleOrDefaultAsync(candidate => candidate.Id == farmId &&
+            candidate.Memberships.Any(membership => membership.UserId == userId && membership.IsActive &&
+                (membership.Role == FarmRole.Owner || membership.Role == FarmRole.Administrator)), cancellationToken);
+        if (farm is null) return NotFound();
+        farm.Update(request.Name, request.Location);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return Ok(new FarmResponse(farm.Id, farm.Name, farm.Location, farm.CreatedAt));
+    }
+
+    [HttpDelete("{farmId:guid}")]
+    [Authorize(Policy = FarmMembershipRequirement.PolicyName)]
+    public async Task<IActionResult> Delete(Guid farmId, CancellationToken cancellationToken)
+    {
+        var userId = User.FindFirstValue("sub") ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
+        var farm = await dbContext.Farms.SingleOrDefaultAsync(candidate => candidate.Id == farmId &&
+            candidate.Memberships.Any(membership => membership.UserId == userId && membership.IsActive &&
+                (membership.Role == FarmRole.Owner || membership.Role == FarmRole.Administrator)), cancellationToken);
+        if (farm is null) return NotFound();
+        dbContext.Farms.Remove(farm);
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            return Conflict(new { message = "The farm still has records that prevent deletion." });
+        }
+        return NoContent();
+    }
 }
 
 public sealed record CreateFarmRequest(
+    [property: Required, StringLength(160, MinimumLength = 2)] string Name,
+    [property: StringLength(240)] string? Location);
+
+public sealed record UpdateFarmRequest(
     [property: Required, StringLength(160, MinimumLength = 2)] string Name,
     [property: StringLength(240)] string? Location);
 
