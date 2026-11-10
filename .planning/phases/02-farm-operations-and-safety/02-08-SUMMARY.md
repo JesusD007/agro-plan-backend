@@ -17,11 +17,11 @@ provides:
   - Producer confirmation that applies deterministic schedule dates and projects them in calendar reads
 affects: [phase-2-verification, calendar, worker, ai-provider]
 actuals:
-  tokens: 21586
+  tokens: 21639
   tasks: 2
-  commits: 3
+  commits: 4
 plan_head_before: 9af0d623d1635cbe4459c6db8ad2535aceea4091
-plan_head_after: 9a7ca3035ced80da101de967e44a6585a46c6abc
+plan_head_after: 471440b7cd080199234993d9f3a968970b20aa01
 tech-stack:
   added: []
   patterns: [provider-neutral AI contract, idempotent conditional worker claim, immutable proposal snapshot and confirmed schedule projection]
@@ -101,6 +101,7 @@ status: complete
 1. **Task 1: Persist deterministic schedule proposals and require producer confirmation** — `f7790aa`
 2. **Task 2: Add provider-neutral AI explanations and offline safety evaluation** — `e11edf5`
 3. **Task 1 follow-up: Apply confirmed calendar deltas** — `9a7ca30`
+4. **Task 1 follow-up: Recheck region-scoped calendar evidence in the Worker** — `471440b`
 
 ## Deviations from Plan
 
