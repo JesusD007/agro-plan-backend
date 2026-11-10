@@ -86,8 +86,11 @@ public sealed class OperationsReportsTests(PostgreSqlFixture postgres)
             var crop = await db.CropCatalogEntries.SingleAsync(x => x.Code == "ARROZ", ct);
             cycleId = Guid.NewGuid();
             db.CropCycles.Add(new CropCycle(cycleId, farmId, parcelId, crop, new DateOnly(2026, 1, 2), null, null, now));
+            var originalSowing = new LogbookEntry(Guid.NewGuid(), farmId, parcelId, cycleId, LogbookActivityType.Sowing,
+                now.AddDays(-30), "Original planting date", owner, now.AddDays(-30));
+            db.LogbookEntries.Add(originalSowing);
             db.LogbookEntries.Add(new LogbookEntry(Guid.NewGuid(), farmId, parcelId, cycleId, LogbookActivityType.Sowing,
-                now.AddDays(-30), "Confirmed planting", owner, now.AddDays(-30)));
+                now.AddDays(-12), "Corrected planting date", owner, now.AddDays(-11), originalSowing.Id, "Planting date correction"));
             expenseId = Guid.NewGuid();
             db.ExpenseEntries.Add(new ExpenseEntry(expenseId, farmId, parcelId, cycleId, OperationCostCategory.Material,
                 now.AddDays(-1), "=SUM(A1:A2)", 12.5m, "DOP", 3m, "kg", owner, now.AddDays(-1)));
@@ -113,7 +116,14 @@ public sealed class OperationsReportsTests(PostgreSqlFixture postgres)
         Assert.Equal(cycleId, production.GetProperty("cropCycleId").GetGuid());
         Assert.Equal("ARROZ", production.GetProperty("cropCode").GetString());
         Assert.Equal(1.5m, production.GetProperty("areaHectares").GetDecimal());
+        Assert.Equal(DateOnly.FromDateTime(now.AddDays(-12).UtcDateTime), DateOnly.Parse(production.GetProperty("plantingDate").GetString()!));
         Assert.Equal(harvestId, production.GetProperty("harvestedQuantities")[0].GetProperty("sourceHarvestIds")[0].GetGuid());
+
+        using var productionCsvResponse = await client.GetAsync($"/api/farms/{farmId}/reports/production.csv", ct);
+        Assert.Equal(HttpStatusCode.OK, productionCsvResponse.StatusCode);
+        var productionCsv = await productionCsvResponse.Content.ReadAsStringAsync(ct);
+        Assert.Contains(now.AddDays(-12).ToString("yyyy-MM-dd"), productionCsv);
+        Assert.DoesNotContain(now.AddDays(-30).ToString("yyyy-MM-dd"), productionCsv);
 
         using var foreignResponse = await client.GetAsync($"/api/farms/{Guid.NewGuid()}/reports/production", ct);
         Assert.Equal(HttpStatusCode.Forbidden, foreignResponse.StatusCode);

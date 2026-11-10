@@ -47,8 +47,12 @@ public sealed class OperationsReportReader
         if (farmId == Guid.Empty) throw new ArgumentException("Farm id is required.", nameof(farmId));
         var latestHarvests = Latest(harvestRows, x => x.FarmId == farmId);
         var byCycle = latestHarvests.GroupBy(x => x.CropCycleId).ToDictionary(x => x.Key, x => x.ToArray());
-        var plantingDates = plantingRows.Where(x => x.FarmId == farmId && x.CropCycleId.HasValue && x.ActivityType == LogbookActivityType.Sowing)
-            .GroupBy(x => x.CropCycleId!.Value).ToDictionary(x => x.Key, x => (DateOnly?)DateOnly.FromDateTime(x.Min(y => y.OccurredAt).UtcDateTime));
+        var sowingRows = plantingRows.Where(x => x.FarmId == farmId && x.CropCycleId.HasValue && x.ActivityType == LogbookActivityType.Sowing).ToArray();
+        var supersededSowingIds = sowingRows.Where(x => x.CorrectsEntryId.HasValue)
+            .Select(x => x.CorrectsEntryId!.Value).ToHashSet();
+        var plantingDates = sowingRows.Where(x => !supersededSowingIds.Contains(x.Id))
+            .GroupBy(x => x.CropCycleId!.Value)
+            .ToDictionary(x => x.Key, x => (DateOnly?)DateOnly.FromDateTime(x.Min(y => y.OccurredAt).UtcDateTime));
         var rows = cycles.Where(x => x.Cycle.FarmId == farmId && x.Parcel.FarmId == farmId)
             .OrderBy(x => x.Cycle.Id)
             .Select(x =>

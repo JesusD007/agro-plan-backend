@@ -59,6 +59,24 @@ public sealed class OperationsReportTests
         Assert.Equal(new[] { correction.Id }, Assert.Single(row.HarvestedQuantities, x => x.Unit == "kg").SourceHarvestIds);
     }
 
+    [Fact]
+    public void Production_uses_corrected_active_sowing_date()
+    {
+        var farm = Guid.NewGuid(); var parcelId = Guid.NewGuid(); var cycleId = Guid.NewGuid();
+        var now = DateTimeOffset.UtcNow;
+        var crop = new CropCatalogEntry(Guid.NewGuid(), "ARROZ", "Arroz", "catalog", CropCatalogValidationStatus.IdentityOnly, null, null, null);
+        var parcel = new Parcel(parcelId, farm, "Parcel", null, 1.5m, now);
+        var cycle = new CropCycle(cycleId, farm, parcelId, crop, null, null, null, now);
+        var original = new LogbookEntry(Guid.NewGuid(), farm, parcelId, cycleId, LogbookActivityType.Sowing,
+            now.AddDays(-30), "Original planting date", "producer", now.AddDays(-29));
+        var correction = new LogbookEntry(Guid.NewGuid(), farm, parcelId, cycleId, LogbookActivityType.Sowing,
+            now.AddDays(-12), "Corrected planting date", "producer", now, original.Id, "Planting date correction");
+
+        var report = new OperationsReportReader().ReadProduction(farm, [(cycle, parcel)], [], [original, correction]);
+
+        Assert.Equal(DateOnly.FromDateTime(now.AddDays(-12).UtcDateTime), Assert.Single(report.CropCycles).PlantingDate);
+    }
+
     private static ExpenseEntry Expense(Guid id, Guid farm, Guid parcel, Guid? cycle, decimal amount,
         string currency, decimal? quantity, string? unit, DateTimeOffset at, Guid? corrects = null) =>
         new(id, farm, parcel, cycle, OperationCostCategory.Material, at, "Input", amount, currency,
