@@ -1,4 +1,5 @@
 using AgroPlan.Domain.Farms;
+using AgroPlan.Domain.Planning;
 using AgroPlan.Domain.Workforce;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -24,6 +25,7 @@ public sealed class TaskScheduleRevisionConfiguration : IEntityTypeConfiguration
             .HasForeignKey(revision => new { revision.FarmId, revision.WorkTaskId })
             .HasPrincipalKey(task => new { task.FarmId, task.Id }).OnDelete(DeleteBehavior.Cascade);
         builder.HasOne<Farm>().WithMany().HasForeignKey(revision => revision.FarmId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne<OutboxMessage>().WithMany().HasForeignKey(revision => revision.SourceEventId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<FarmMembership>().WithMany()
             .HasForeignKey(revision => new { revision.FarmId, UserId = revision.ConfirmedByUserId })
             .HasPrincipalKey(member => new { member.FarmId, member.UserId }).OnDelete(DeleteBehavior.Restrict);

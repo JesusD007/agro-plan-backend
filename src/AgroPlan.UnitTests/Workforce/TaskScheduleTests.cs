@@ -1,5 +1,7 @@
 using AgroPlan.Domain.Workforce;
 using AgroPlan.Application.Workforce;
+using AgroPlan.Application.Abstractions;
+using AgroPlan.Infrastructure.Calendars;
 using Xunit;
 
 namespace AgroPlan.UnitTests.Workforce;
@@ -56,5 +58,48 @@ public sealed class TaskScheduleTests
         var domainAssembly = typeof(WorkTask).Assembly;
         Assert.NotNull(applicationAssembly.GetType("AgroPlan.Application.Abstractions.IExternalWorkCalendar"));
         Assert.NotNull(domainAssembly.GetType("AgroPlan.Domain.Workforce.CalendarDeliveryStatus"));
+    }
+
+    [Fact]
+    public async Task Unconfigured_calendar_remains_explicitly_retryable()
+    {
+        var adapter = new UnconfiguredWorkCalendar();
+        var result = await adapter.UpsertAsync(new ExternalWorkCalendarEntry(Guid.NewGuid(), Guid.NewGuid(),
+            Guid.NewGuid(), "worker", new DateOnly(2026, 11, 20), 2, Guid.NewGuid().ToString("N")), CancellationToken.None);
+
+        Assert.False(result.Succeeded);
+        Assert.True(result.Retryable);
+        Assert.Equal("CALENDAR_PROVIDER_UNCONFIGURED", result.ErrorCode);
+    }
+
+    [Fact]
+    public void Delivery_status_persists_backoff_and_makes_success_terminal()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var status = new CalendarDeliveryStatus(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(),
+            Guid.NewGuid(), 2, now);
+        status.StartAttempt(now);
+        status.MarkFailed("NETWORK", true, now, TimeSpan.FromSeconds(5), 3);
+        Assert.Equal(CalendarDeliveryState.Retryable, status.State);
+        Assert.False(status.CanAttempt(now.AddSeconds(4)));
+        status.StartAttempt(now.AddSeconds(5));
+        status.MarkSucceeded(now.AddSeconds(6));
+        Assert.Equal(CalendarDeliveryState.Succeeded, status.State);
+        Assert.False(status.CanAttempt(now.AddMinutes(1)));
+        Assert.Equal(2, status.AttemptCount);
+    }
+
+    [Fact]
+    public void Permanent_calendar_failure_is_visible_and_cannot_be_retried()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var status = new CalendarDeliveryStatus(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(),
+            Guid.NewGuid(), 1, now);
+        status.StartAttempt(now);
+        status.MarkFailed("INVALID_CREDENTIALS", false, now, TimeSpan.Zero, 5);
+
+        Assert.Equal(CalendarDeliveryState.Terminal, status.State);
+        Assert.Equal("INVALID_CREDENTIALS", status.LastErrorCode);
+        Assert.False(status.CanAttempt(now.AddHours(1)));
     }
 }

@@ -131,9 +131,29 @@ public sealed class TaskScheduleController(AgroPlanDbContext db) : ControllerBas
             x.ProposedDate, x.Explanation, x.Status.ToString(), x.SourceRecordId, x.SourceRecordVersion,
             x.ProposedAt, x.ConfirmedByUserId, x.ConfirmedAt)).ToArray());
     }
+
+    [HttpGet("tasks/{taskId:guid}/calendar-delivery")]
+    public async Task<ActionResult<IReadOnlyList<CalendarDeliveryResponse>>> CalendarDelivery(Guid farmId, Guid taskId, CancellationToken ct)
+    {
+        var userId = User.FindFirstValue("sub") ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId is null) return Unauthorized();
+        var role = await db.FarmMemberships.AsNoTracking().Where(x => x.FarmId == farmId && x.UserId == userId && x.IsActive)
+            .Select(x => (FarmRole?)x.Role).SingleOrDefaultAsync(ct);
+        if (role is null) return Forbid();
+        var task = await db.WorkTasks.AsNoTracking().SingleOrDefaultAsync(x => x.FarmId == farmId && x.Id == taskId, ct);
+        if (task is null) return NotFound();
+        if (role == FarmRole.Worker && task.AssignedWorkerUserId != userId) return NotFound();
+        if (role is not (FarmRole.Owner or FarmRole.Administrator or FarmRole.Worker)) return Forbid();
+        var rows = await db.CalendarDeliveryStatuses.AsNoTracking().Where(x => x.FarmId == farmId && x.WorkTaskId == taskId)
+            .OrderByDescending(x => x.CreatedAt).Take(100).ToListAsync(ct);
+        return Ok(rows.Select(x => new CalendarDeliveryResponse(x.OutboxEventId, x.RevisionId, x.TaskVersion,
+            x.State.ToString().ToLowerInvariant(), x.AttemptCount, x.LastErrorCode, x.NextAttemptAt, x.DeliveredAt)).ToArray());
+    }
 }
 
 public sealed record RescheduleTaskRequest(DateOnly ProposedDate, string Explanation);
 public sealed record TaskScheduleRevisionResponse(Guid Id, Guid WorkTaskId, DateOnly PreviousDate,
     DateOnly ProposedDate, string Explanation, string Status, Guid? SourceRecordId, int SourceRecordVersion,
     DateTimeOffset ProposedAt, string? ConfirmedByUserId, DateTimeOffset? ConfirmedAt);
+public sealed record CalendarDeliveryResponse(Guid OutboxEventId, Guid RevisionId, int TaskVersion, string State,
+    int AttemptCount, string? LastErrorCode, DateTimeOffset? NextAttemptAt, DateTimeOffset? DeliveredAt);
