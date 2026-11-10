@@ -2,6 +2,7 @@ using AgroPlan.Domain.Farms;
 using AgroPlan.Domain.Crops;
 using AgroPlan.Domain.Planning;
 using AgroPlan.Domain.Logbook;
+using AgroPlan.Domain.Operations;
 using AgroPlan.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -28,6 +29,7 @@ public sealed class AgroPlanDbContext(DbContextOptions<AgroPlanDbContext> option
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
     public DbSet<LogbookEntry> LogbookEntries => Set<LogbookEntry>();
     public DbSet<LogbookAttachment> LogbookAttachments => Set<LogbookAttachment>();
+    public DbSet<ExpenseEntry> ExpenseEntries => Set<ExpenseEntry>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
