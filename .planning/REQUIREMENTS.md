@@ -569,12 +569,12 @@ Each documented requirement is assigned to exactly one roadmap phase. The six pi
 | REQ-rf-g-21 | Phase 3: Workforce and Offline Operations | Pending |
 | REQ-rf-g-22 | Phase 3: Workforce and Offline Operations | Pending |
 | REQ-rf-g-23 | Phase 3: Workforce and Offline Operations | Complete |
-| REQ-rf-g-25 | Phase 3: Workforce and Offline Operations | Pending |
-| REQ-rf-g-26 | Phase 3: Workforce and Offline Operations | Pending |
-| REQ-rf-g-27 | Phase 3: Workforce and Offline Operations | Pending |
-| REQ-rf-g-28 | Phase 3: Workforce and Offline Operations | Pending |
-| REQ-rf-g-29 | Phase 3: Workforce and Offline Operations | Pending |
-| REQ-rf-g-30 | Phase 3: Workforce and Offline Operations | Pending |
+| REQ-rf-g-25 | Phase 3: Workforce and Offline Operations | Complete |
+| REQ-rf-g-26 | Phase 3: Workforce and Offline Operations | Complete |
+| REQ-rf-g-27 | Phase 3: Workforce and Offline Operations | Complete |
+| REQ-rf-g-28 | Phase 3: Workforce and Offline Operations | Complete |
+| REQ-rf-g-29 | Phase 3: Workforce and Offline Operations | Complete |
+| REQ-rf-g-30 | Phase 3: Workforce and Offline Operations | Complete |
 | REQ-rf-g-41 | Phase 3: Workforce and Offline Operations | Pending |
 | REQ-rf-g-39 | Phase 4: Applied Farm Intelligence | Pending |
 | REQ-rf-g-40 | Phase 4: Applied Farm Intelligence | Pending |

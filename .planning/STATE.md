@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 3
 current_phase_name: Workforce and Offline Operations
 status: executing
-stopped_at: Completed 03-03-PLAN.md
-last_updated: "2026-11-10T21:49:43.963Z"
+stopped_at: Completed 03-04-PLAN.md
+last_updated: "2026-11-10T22:14:26.912Z"
 last_activity: 2026-11-10
 last_activity_desc: Phase 3 execution started
-state_head: 782104640807e1775e8711aff25b87c71a2f0a9d
+state_head: 3d0335c0cd11413526080e498b47f52e28943007
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 27
-  completed_plans: 23
+  completed_plans: 24
   percent: 33
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-11-09)
 ## Current Position
 
 Phase: 3 (Workforce and Offline Operations) — EXECUTING
-Plan: 4 of 7
+Plan: 5 of 7
 Status: Ready to execute
 Last activity: 2026-11-10 — Phase 3 execution started
 
@@ -65,6 +65,7 @@ Progress: ████████░░ [███░░░░░░░] 33%
 | Phase 03 P01 | 25min | 2 tasks | 11 files |
 | Phase 03 P02 | 23 min | 3 tasks | 28 files |
 | Phase 03 P03 | 21m | 2 tasks | 19 files |
+| Phase 03 P04 | 22min | 2 tasks | 18 files |
 
 ## Accumulated Context
 
@@ -102,6 +103,12 @@ Progress: ████████░░ [███░░░░░░░] 33%
 - [Phase 03]: Offline sync receipts use canonical JSON SHA-256 fingerprints and a farm/worker/operation-scoped PostgreSQL advisory lock.
 - [Phase 03]: Task conflicts preserve client/server snapshots and append administrative resolution as a separate audit record after rechecking the task version.
 - [Phase 03]: Task conflicts preserve client/server snapshots and append administrative resolution as a separate audit record after rechecking the task version.
+- [Phase 03]: Award points only from persisted, matching verified-task events and deduplicate under PostgreSQL locks.
+- [Phase 03]: Use explicit farm time zones for streaks, and keep rankings disabled until a farm administrator enables them.
+- [Phase 03]: Record manual rewards as auditable non-payment entries without publishing payment events.
+- [Phase 03]: Use explicit farm time zones for streaks, and keep rankings disabled until a farm administrator enables them.
+- [Phase 03]: Record manual rewards as auditable non-payment entries without publishing payment events.
+- [Phase 03]: Task-level award criteria are stored with assignments and limited to verified completion plus finalized evidence presence.
 
 ### Pending Todos
 
@@ -120,6 +127,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-10T21:49:42.770Z
-Stopped at: Completed 03-03-PLAN.md
-Resume file: 03-04-PLAN.md
+Last session: 2026-11-10T22:14:01.208Z
+Stopped at: Completed 03-04-PLAN.md
+Resume file: 03-05-PLAN.md
