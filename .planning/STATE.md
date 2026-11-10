@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 3
 current_phase_name: Workforce and Offline Operations
 status: executing
-stopped_at: "Phase 3 paused at blocking-human precondition: .NET SDK 10 and Docker unavailable"
-last_updated: "2026-11-10T18:41:49.956Z"
+stopped_at: Completed 03-01-PLAN.md
+last_updated: "2026-11-10T20:49:00.544Z"
 last_activity: 2026-11-10
 last_activity_desc: Phase 3 execution started
-state_head: 41954206926739c02c57788c52ddd7c48a75cb4a
+state_head: 48b464fa54b3d92a46db2cc20bb41c93bdc0f1b4
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 27
-  completed_plans: 20
+  completed_plans: 21
   percent: 33
 ---
 
@@ -28,8 +28,8 @@ See: .planning/PROJECT.md (updated 2026-11-09)
 ## Current Position
 
 Phase: 3 (Workforce and Offline Operations) — EXECUTING
-Plan: 1 of 7
-Status: Executing Phase 3
+Plan: 2 of 7
+Status: Ready to execute
 Last activity: 2026-11-10 — Phase 3 execution started
 
 Progress: ████████░░ [███░░░░░░░] 33%
@@ -62,6 +62,7 @@ Progress: ████████░░ [███░░░░░░░] 33%
 | Phase 02 P06 | 16m | 2 tasks | 7 files |
 | Phase 2 P7 | 20min | 2 tasks | 12 files |
 | Phase 02 P08 | 22m | 2 tasks | 16 files |
+| Phase 03 P01 | 25min | 2 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -90,6 +91,9 @@ Progress: ████████░░ [███░░░░░░░] 33%
 - [Phase 02]: Calendar estimates require a confirmed sowing date and a current validated crop template.
 - [Phase 02]: Estimated harvest windows are informational and do not bypass exact validated PHI eligibility.
 - [Phase 2]: Advisor grants are separate, read-only, limited to explicit report scopes and a maximum 90-day interval, and checked against PostgreSQL for every request.
+- [Phase 03]: Worker invitations use SHA-256 token digests, seven-day expiry, and verified normalized-email matching.
+- [Phase 03]: Basic worker capacity counts active Workers plus pending invitations; Premium entitlement is trusted server-provisioned state.
+- [Phase 03]: Invitation issue and renewal require a configured HTTPS client acceptance URL.
 
 ### Pending Todos
 
@@ -108,6 +112,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-10T18:41:49.088Z
-Stopped at: Phase 3 paused at blocking-human precondition: .NET SDK 10 and Docker unavailable
-Resume file: .planning/phases/03-workforce-and-offline-operations/03-01-PLAN.md
+Last session: 2026-11-10T20:48:59.418Z
+Stopped at: Completed 03-01-PLAN.md
+Resume file: 03-02-PLAN.md
