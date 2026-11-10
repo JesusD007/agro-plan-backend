@@ -44,6 +44,23 @@ public sealed class WorkTaskTests
         Assert.Equal("apply_input", task.OperationKind);
     }
 
+    [Fact]
+    public void Review_decision_requires_reason_and_verified_wage_is_an_immutable_fact()
+    {
+        var farmId = Guid.NewGuid();
+        var taskId = Guid.NewGuid();
+        var submissionId = Guid.NewGuid();
+        var now = DateTimeOffset.UtcNow;
+        Assert.Throws<ArgumentException>(() => new TaskReviewDecision(Guid.NewGuid(), farmId, taskId,
+            submissionId, "admin-1", TaskReviewAction.Rejected, null, now));
+        var decision = new TaskReviewDecision(Guid.NewGuid(), farmId, taskId, submissionId, "admin-1",
+            TaskReviewAction.CorrectionRequested, " Please upload a clearer image. ", now);
+        Assert.Equal("Please upload a clearer image.", decision.Reason);
+        var wage = new VerifiedWageEntry(Guid.NewGuid(), farmId, taskId, "worker-1", 125m, "day", now);
+        Assert.Equal(125m, wage.Amount);
+        Assert.Equal("day", wage.Unit);
+    }
+
     private static WorkTask Create() => new(Guid.NewGuid(), Guid.NewGuid(), "worker-1",
         DateOnly.FromDateTime(DateTime.UtcNow), "Prune", false, 125m, "day", null, null);
 }

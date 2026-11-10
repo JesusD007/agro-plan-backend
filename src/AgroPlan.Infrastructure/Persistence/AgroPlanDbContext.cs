@@ -46,6 +46,8 @@ public sealed class AgroPlanDbContext(DbContextOptions<AgroPlanDbContext> option
     public DbSet<WorkerInvitation> WorkerInvitations => Set<WorkerInvitation>();
     public DbSet<WorkTask> WorkTasks => Set<WorkTask>();
     public DbSet<TaskEvidenceSubmission> TaskEvidenceSubmissions => Set<TaskEvidenceSubmission>();
+    public DbSet<TaskReviewDecision> TaskReviewDecisions => Set<TaskReviewDecision>();
+    public DbSet<VerifiedWageEntry> VerifiedWageEntries => Set<VerifiedWageEntry>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
