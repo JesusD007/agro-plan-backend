@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using AgroPlan.Application.Abstractions;
+using AgroPlan.Application.Planning;
 using Google.GenAI;
 using Google.GenAI.Types;
 using Microsoft.Extensions.Configuration;
@@ -16,6 +17,7 @@ public sealed class GeminiProposalProvider(
     IConfiguration configuration,
     ILogger<GeminiProposalProvider> logger) : IAiProposalProvider
 {
+    public const string ProviderName = "gemini";
     public const string PromptVersion = "sowing-draft-v1";
     public const string SchemaVersion = "sowing-json-v1";
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
@@ -82,10 +84,9 @@ public sealed class GeminiProposalProvider(
 
                 var json = response.Candidates?.FirstOrDefault()?.Content?.Parts?
                     .FirstOrDefault()?.Text;
-                var generated = ValidateResponse(json, input);
+                var draft = ParseResponse(json, input, model);
                 RecordSuccess();
-                return new AiProposalDraft(generated.Summary, generated.SourceIds, generated.MissingInputs,
-                    model, PromptVersion, SchemaVersion, DateTimeOffset.UtcNow);
+                return draft;
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -120,7 +121,7 @@ public sealed class GeminiProposalProvider(
         throw new GeminiProviderException("Gemini provider is temporarily unavailable.");
     }
 
-    private static GeneratedContent ValidateResponse(string? json, SowingGenerationInput input)
+    public static AiProposalDraft ParseResponse(string? json, SowingGenerationInput input, string model)
     {
         if (string.IsNullOrWhiteSpace(json))
             throw new GeminiProviderException("Gemini returned no proposal content.");
@@ -137,6 +138,8 @@ public sealed class GeminiProposalProvider(
 
         if (content is null || string.IsNullOrWhiteSpace(content.Summary) || content.Summary.Length > 600)
             throw new GeminiProviderException("Gemini returned an incomplete proposal summary.");
+        if (content.SourceIds is null || content.MissingInputs is null)
+            throw new GeminiProviderException("Gemini returned incomplete proposal evidence.");
         if (Regex.IsMatch(content.Summary, @"\d", RegexOptions.CultureInvariant))
             throw new GeminiProviderException("Gemini output contained an unsupported numeric claim.");
 
@@ -150,7 +153,15 @@ public sealed class GeminiProposalProvider(
         if (content.MissingInputs.Any(missing => string.IsNullOrWhiteSpace(missing) || missing.Length > 100))
             throw new GeminiProviderException("Gemini returned an invalid missing-input identifier.");
 
-        return content;
+        return AiProposalDraftValidator.Validate(input, new AiProposalDraft(
+            content.Summary,
+            content.SourceIds,
+            content.MissingInputs,
+            model,
+            PromptVersion,
+            SchemaVersion,
+            DateTimeOffset.UtcNow,
+            ProviderName));
     }
 
     private void EnsureCircuitAllowsCall()

@@ -30,7 +30,8 @@ public sealed record AiProposalDraft(
     string Model,
     string PromptVersion,
     string SchemaVersion,
-    DateTimeOffset GeneratedAt);
+    DateTimeOffset GeneratedAt,
+    string Provider);
 
 public enum AiProposalProviderFailureKind
 {

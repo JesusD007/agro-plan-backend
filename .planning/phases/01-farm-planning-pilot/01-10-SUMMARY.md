@@ -9,7 +9,7 @@ completed: 2026-11-10
 
 ## Outcome
 
-Added `AgroPlan.UnitTests` to the solution with xUnit v3, VSTest discovery, and isolated unit coverage for crop catalog behavior, deterministic planting-frame calculations, sowing proposal confirmation guards, and immutable logbook corrections.
+Added `AgroPlan.UnitTests` to the solution with xUnit v3, VSTest discovery, and isolated unit coverage for crop catalog behavior, deterministic planting-frame calculations, sowing proposal confirmation guards, immutable logbook corrections, and provider-neutral AI draft validation. Eighteen additional validator cases now verify that malformed or unsupported output from any adapter is rejected before persistence.
 
 The first runner configuration used Microsoft Testing Platform, which did not work reliably with the repository's `dotnet test` invocation. It was changed to xUnit v3 3.2.2 with `xunit.runner.visualstudio` 4.0.1 and `Microsoft.NET.Test.Sdk` 18.11.0. The supported command is:
 
@@ -19,7 +19,8 @@ dotnet test src/AgroPlan.UnitTests/AgroPlan.UnitTests.csproj --no-restore -m:1
 
 ## Verification
 
-- **Result:** 14 passed, 0 failed, 0 skipped.
+- **Initial plan result:** 14 passed, 0 failed, 0 skipped.
+- **Current suite result:** 46 passed, 0 failed, 0 skipped.
 - **External services:** not required for this suite.
 - **Agronomic fixtures:** synthetic values exist only in tests; runtime catalog seeds remain unchanged.
 

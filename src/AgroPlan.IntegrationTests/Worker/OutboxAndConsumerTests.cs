@@ -205,7 +205,7 @@ public sealed class OutboxAndConsumerTests(PostgreSqlRabbitFixture services)
         public Task<AiProposalDraft> GenerateDraftAsync(SowingGenerationInput input, CancellationToken cancellationToken)
         {
             Interlocked.Increment(ref _calls);
-            return Task.FromResult(new AiProposalDraft("test draft", [], [], "test-model", "test-prompt", "test-schema", DateTimeOffset.UtcNow));
+            return Task.FromResult(new AiProposalDraft("test draft", [], [], "test-model", "test-prompt", "test-schema", DateTimeOffset.UtcNow, "test-provider"));
         }
     }
 }

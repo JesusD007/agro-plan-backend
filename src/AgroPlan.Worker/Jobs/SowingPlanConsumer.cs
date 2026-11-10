@@ -1,5 +1,6 @@
 using System.Text.Json;
 using AgroPlan.Application.Abstractions;
+using AgroPlan.Application.Planning;
 using AgroPlan.Domain.Crops;
 using AgroPlan.Worker.AI;
 using AgroPlan.Domain.Planning;
@@ -107,7 +108,7 @@ public sealed class SowingPlanConsumer(
         if (claimCount == 0)
         {
             // Missing jobs and jobs already claimed/completed are terminal for this delivery.
-            // The conditional database update guarantees a duplicate delivery cannot call Gemini.
+            // The conditional database update guarantees a duplicate delivery cannot call an AI provider.
             return;
         }
 
@@ -205,6 +206,7 @@ public sealed class SowingPlanConsumer(
             }
 
             var draft = await aiProvider.GenerateDraftAsync(input, cancellationToken);
+            AiProposalDraftValidator.Validate(input, draft);
             var resultMissingInputs = missingInputs.Concat(draft.MissingInputs).Distinct(StringComparer.Ordinal).ToArray();
             var sourceIds = draft.SourceIds.Distinct(StringComparer.Ordinal).ToArray();
             var result = JsonSerializer.Serialize(new
@@ -218,7 +220,7 @@ public sealed class SowingPlanConsumer(
                 model = draft.Model,
                 promptVersion = draft.PromptVersion,
                 schemaVersion = draft.SchemaVersion,
-                modelProvenance = new { provider = "google-ai-studio", model = draft.Model, promptVersion = draft.PromptVersion, schemaVersion = draft.SchemaVersion },
+                modelProvenance = new { provider = draft.Provider, model = draft.Model, promptVersion = draft.PromptVersion, schemaVersion = draft.SchemaVersion },
                 generatedAt = draft.GeneratedAt,
                 inputSnapshot = proposal.InputSnapshotJson,
                 confirmationAllowed = false

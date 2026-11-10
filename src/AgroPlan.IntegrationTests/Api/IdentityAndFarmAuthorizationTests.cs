@@ -14,6 +14,51 @@ namespace AgroPlan.IntegrationTests.Api;
 public sealed class IdentityAndFarmAuthorizationTests(PostgreSqlFixture postgres)
 {
     [Fact]
+    public async Task Producer_can_register_create_a_farm_and_parcel_then_read_them_over_http()
+    {
+        postgres.EnsureAvailable();
+        await using var factory = new ApiTestFactory(postgres.ConnectionString);
+        using var client = factory.CreateClient();
+        var email = $"producer-{Guid.NewGuid():N}@example.test";
+
+        using var registration = await client.PostAsJsonAsync("/api/identity/register", new
+        {
+            email,
+            password = "InitialPass!12345"
+        }, TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.Created, registration.StatusCode);
+        using var session = JsonDocument.Parse(await registration.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        var accessToken = session.RootElement.GetProperty("accessToken").GetString();
+        Assert.False(string.IsNullOrWhiteSpace(accessToken));
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
+
+        using var farmResponse = await client.PostAsJsonAsync("/api/farms", new
+        {
+            name = "Integration Farm",
+            location = "Test province"
+        }, TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.Created, farmResponse.StatusCode);
+        using var farmDocument = JsonDocument.Parse(await farmResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        var farmId = farmDocument.RootElement.GetProperty("id").GetGuid();
+
+        using var parcelResponse = await client.PostAsJsonAsync($"/api/farms/{farmId}/parcels", new
+        {
+            name = "North Parcel",
+            location = "Test province",
+            areaHectares = 1.25m
+        }, TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.Created, parcelResponse.StatusCode);
+        using var parcelDocument = JsonDocument.Parse(await parcelResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        var parcelId = parcelDocument.RootElement.GetProperty("id").GetGuid();
+        Assert.Equal(farmId, parcelDocument.RootElement.GetProperty("farmId").GetGuid());
+
+        using var farmRead = await client.GetAsync($"/api/farms/{farmId}", TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.OK, farmRead.StatusCode);
+        using var parcelRead = await client.GetAsync($"/api/farms/{farmId}/parcels/{parcelId}", TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.OK, parcelRead.StatusCode);
+    }
+
+    [Fact]
     public async Task Farm_membership_is_rechecked_on_each_request_and_scoped_to_that_farm()
     {
         postgres.EnsureAvailable();
@@ -35,6 +80,13 @@ public sealed class IdentityAndFarmAuthorizationTests(PostgreSqlFixture postgres
         TestData.SetBearer(client, admin);
         Assert.Equal(HttpStatusCode.OK, (await client.GetAsync($"/api/farms/{farmA}")).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync($"/api/farms/{farmB}")).StatusCode);
+        using var grantAttempt = await client.PostAsJsonAsync($"/api/farms/{farmA}/administrators", new
+        {
+            email = $"{ownerB}@example.test"
+        }, TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.Forbidden, grantAttempt.StatusCode);
+        using var revokeAttempt = await client.DeleteAsync($"/api/farms/{farmA}/administrators/{admin}", TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.Forbidden, revokeAttempt.StatusCode);
 
         await using (var scope = factory.Services.CreateAsyncScope())
         {

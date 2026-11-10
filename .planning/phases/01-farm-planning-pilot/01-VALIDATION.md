@@ -22,7 +22,7 @@ created: "2026-11-09"
 | **Quick run command** | `dotnet test src/AgroPlan.UnitTests/AgroPlan.UnitTests.csproj -m:1`. No external services or Docker required. |
 | **Full suite command** | `dotnet test src/AgroPlan.sln -m:1`; PostgreSQL and RabbitMQ integration fixtures use disposable Testcontainers and require Docker. |
 | **API docs smoke command** | Covered by integration tests: Development `/openapi/v1.json` and `/scalar/` return 200 (`/scalar` redirects to `/scalar/`); Production maps neither route. |
-| **Observed result** | Full solution: 22 passed, 0 failed, 0 skipped with .NET SDK 10.0.403 and Docker-backed PostgreSQL/RabbitMQ. |
+| **Observed result** | Full solution: 55 passed, 0 failed, 0 skipped with .NET SDK 10.0.403 and Docker-backed PostgreSQL/RabbitMQ. |
 | **Estimated runtime** | Unit suite is local and service-free; integration runtime depends on PostgreSQL and RabbitMQ container startup. |
 
 ---
@@ -70,12 +70,12 @@ External production services remain unprovisioned. Integration tests must use di
 ## Validation Sign-Off
 
 - [x] All tasks have an authorized verification approach.
-- [x] Unit and integration test commands pass on the current phase: 14 unit tests and 8 PostgreSQL/RabbitMQ integration tests.
+- [x] Unit and integration test commands pass on the current phase: 46 unit tests and 9 PostgreSQL/RabbitMQ integration tests, including raw Gemini parsing, provider-neutral AI output validation, owner/admin authorization, and producer registration with HTTP farm/parcel creation.
 - [x] Existing runtime project scaffold is available.
 - [x] No watch-mode flags.
 - [ ] Feedback latency: not applicable.
 - [x] Nyquist compliance: every Phase 1 requirement maps to automated evidence and the complete suite passed.
 
-**Approval:** passed 2026-11-10; no production Gemini, climate, SMTP, or Supabase calls were made.
+**Approval:** passed 2026-11-10; 55/55 tests passed. No production Gemini, climate, SMTP, or Supabase calls were made.
 
 

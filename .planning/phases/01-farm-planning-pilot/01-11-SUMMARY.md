@@ -28,7 +28,7 @@ decisions:
   - API docs-only tests remove hosted background services so they do not depend on PostgreSQL or RabbitMQ.
   - Test host sets early-read connection/JWT configuration in a serialized process environment and restores original values after disposal.
   - Two sowing consumers receive duplicate RabbitMQ events to exercise the atomic PostgreSQL claim.
-  - Nyquist sign-off is true after all 22 unit and integration tests pass.
+  - Nyquist sign-off is true after all 55 unit and integration tests pass.
 metrics:
   duration: 2h
   completed: 2026-11-10
@@ -44,7 +44,7 @@ actuals:
 
 # Phase 1 Plan 11: Integration Test Suite Summary
 
-Added eight xUnit v3 HTTP and persistence integration scenarios with PostgreSQL/RabbitMQ Testcontainers fixtures, covering farm authorization and revocation, support-mediated recovery, crop safe mode, immutable logbook corrections, attachment finalization, duplicate outbox/worker delivery, and Development Scalar/OpenAPI routes.
+Added nine xUnit v3 HTTP and persistence integration scenarios with PostgreSQL/RabbitMQ Testcontainers fixtures, covering producer registration and HTTP farm/parcel creation, farm authorization and revocation, support-mediated recovery, crop safe mode, immutable logbook corrections, attachment finalization, duplicate outbox/worker delivery, provider-neutral draft persistence, and Development Scalar/OpenAPI routes.
 
 ## Completed Tasks
 
@@ -58,8 +58,8 @@ Added eight xUnit v3 HTTP and persistence integration scenarios with PostgreSQL/
 ## Verification
 
 - `dotnet build src/AgroPlan.IntegrationTests/AgroPlan.IntegrationTests.csproj --no-restore -m:1` — passed with 0 errors; a clean rebuild reports xUnit1051 cancellation-token analyzer warnings.
-- `dotnet test src/AgroPlan.IntegrationTests/AgroPlan.IntegrationTests.csproj --no-restore -m:1` — 8 passed, 0 failed, 0 skipped with PostgreSQL/RabbitMQ Testcontainers.
-- `dotnet test src/AgroPlan.sln --no-restore -m:1` — 22 passed (14 unit + 8 integration), 0 failed, 0 skipped.
+- `dotnet test src/AgroPlan.IntegrationTests/AgroPlan.IntegrationTests.csproj --no-restore -m:1` — 9 passed, 0 failed, 0 skipped with PostgreSQL/RabbitMQ Testcontainers.
+- `dotnet test src/AgroPlan.sln --no-restore -m:1` — 55 passed (46 unit + 9 integration), 0 failed, 0 skipped.
 - Development OpenAPI/Scalar and Production route-absence HTTP checks passed.
 
 ## Deviations from Plan
@@ -82,6 +82,6 @@ Added eight xUnit v3 HTTP and persistence integration scenarios with PostgreSQL/
 
 ## Self-Check: PASSED
 
-- All eight `[Fact]` tests and the integration project files are present.
+- All nine `[Fact]` integration tests and the test project files are present.
 - Both implementation commits are ancestors of the plan branch head.
-- Nyquist compliance is true in `01-VALIDATION.md`; all 22 tests pass with containers enabled.
+- Nyquist compliance is true in `01-VALIDATION.md`; all 55 tests pass with containers enabled.
