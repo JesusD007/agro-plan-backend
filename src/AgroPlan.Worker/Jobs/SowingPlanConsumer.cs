@@ -20,6 +20,8 @@ public sealed class SowingPlanConsumer(
     IAiProposalProvider aiProvider,
     ILogger<SowingPlanConsumer> logger) : BackgroundService
 {
+    private static readonly JsonSerializerOptions MessageJsonOptions = new(JsonSerializerDefaults.Web);
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         while (!stoppingToken.IsCancellationRequested)
@@ -85,7 +87,7 @@ public sealed class SowingPlanConsumer(
 
     private async Task HandleAsync(byte[] body, CancellationToken cancellationToken)
     {
-        var message = JsonSerializer.Deserialize<SowingPlanRequested>(body);
+        var message = JsonSerializer.Deserialize<SowingPlanRequested>(body, MessageJsonOptions);
         if (message is null || message.JobId == Guid.Empty || message.Version != 1)
             throw new InvalidOperationException("The proposal queue message is invalid.");
 

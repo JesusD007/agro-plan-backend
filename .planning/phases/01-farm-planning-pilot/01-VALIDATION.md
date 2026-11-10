@@ -22,14 +22,15 @@ created: "2026-11-09"
 | **Quick run command** | `dotnet test src/AgroPlan.UnitTests/AgroPlan.UnitTests.csproj`. No external services or Docker required. |
 | **Full suite command** | `dotnet test src/AgroPlan.sln`; PostgreSQL and RabbitMQ integration fixtures use disposable Testcontainers and require Docker. |
 | **API docs smoke command** | Covered by integration tests: Development `/openapi/v1.json` and `/scalar` respond; Production does not map either route. |
-| **Estimated runtime** | To be measured after plans 01-10 and 01-11 pass. |
+| **Estimated runtime** | Unit suite is local and service-free; integration runtime depends on PostgreSQL and RabbitMQ container startup. |
 
 ---
 
 ## Sampling Rate
 
 - Unit tests cover deterministic domain/application decisions and provider-dependent worker branches using fakes.
-- Integration tests use PostgreSQL and RabbitMQ containers for persistence, authorization revocation, immutability, outbox, and duplicate-delivery guarantees.
+- Integration tests use PostgreSQL and RabbitMQ Testcontainers for persistence, authorization revocation, immutability, outbox, and worker delivery. Fixtures check Docker availability first and dynamically skip with a reason when no Docker-compatible engine is reachable.
+- The current worker integration case exercises single delivery and durable safe-mode transitions; duplicate/concurrent RabbitMQ delivery and atomic worker-claim assertions remain unverified and must be added before production reliance.
 - No test connects to Gemini, climate, SMTP, Supabase, or configured production endpoints.
 - A successful build is a compile check, not behavioral verification; completion requires passing the relevant test commands.
 
@@ -55,7 +56,7 @@ created: "2026-11-09"
 
 - [x] Establish the solution and runtime projects.
 - [x] Select xUnit v3 for the authorized .NET 10 test projects.
-- [ ] Add isolated unit and integration test projects; keep production provider credentials out of fixtures.
+- [x] Add isolated unit and integration test projects; keep production provider credentials out of fixtures.
 
 ---
 
@@ -68,9 +69,9 @@ External production services remain unprovisioned. Integration tests must use di
 ## Validation Sign-Off
 
 - [x] All tasks have an authorized verification approach.
-- [ ] Unit and integration test commands pass on the current phase.
+- [ ] Unit and integration test commands pass on the current phase. Integration tests build with .NET SDK 10.0.403, but this runner did not produce test results: the Docker engine pipe is inaccessible and even the OpenAPI-only filtered test stalled before reporting. Run `dotnet test src/AgroPlan.IntegrationTests/AgroPlan.IntegrationTests.csproj -m:1` and `dotnet test src/AgroPlan.sln -m:1` on a Docker-enabled runner before sign-off.
 - [x] Existing runtime project scaffold is available.
-- [ ] No watch-mode flags.
+- [x] No watch-mode flags.
 - [ ] Feedback latency: not applicable.
 - [ ] Set `nyquist_compliant: true` only after the complete suite passes and all Phase 1 requirements map to evidence.
 
