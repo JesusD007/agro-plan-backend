@@ -91,17 +91,40 @@ public sealed class SowingPlanConsumer(
 
         await using var scope = scopeFactory.CreateAsyncScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<AgroPlanDbContext>();
-        var proposal = await dbContext.SowingProposals.SingleOrDefaultAsync(
-            item => item.Id == message.JobId,
-            cancellationToken);
-        if (proposal is null)
+        var claimedAt = DateTimeOffset.UtcNow;
+        var staleClaimBefore = claimedAt.AddMinutes(-15);
+        var claimCount = await dbContext.SowingProposals
+            .Where(item => item.Id == message.JobId &&
+                (item.Status == SowingProposalStatus.Pending ||
+                 (item.Status == SowingProposalStatus.Processing && item.StatusChangedAt < staleClaimBefore)))
+            .ExecuteUpdateAsync(update => update
+                .SetProperty(item => item.Status, SowingProposalStatus.Processing)
+                .SetProperty(item => item.UpdatedAt, claimedAt)
+                .SetProperty(item => item.StatusChangedAt, claimedAt)
+                .SetProperty(item => item.StatusVersion, item => item.StatusVersion + 1), cancellationToken);
+        if (claimCount == 0)
         {
-            // A missing aggregate is terminal: acknowledging avoids an infinite retry loop.
-            logger.LogWarning("Proposal job {JobId} no longer exists; acknowledging the stale delivery.", message.JobId);
+            // Missing jobs and jobs already claimed/completed are terminal for this delivery.
+            // The conditional database update guarantees a duplicate delivery cannot call Gemini.
             return;
         }
 
-        if (proposal.Status != SowingProposalStatus.Pending) return;
+        SowingProposal proposal;
+        try
+        {
+            proposal = await dbContext.SowingProposals.SingleAsync(item => item.Id == message.JobId, cancellationToken);
+        }
+        catch
+        {
+            var retryAt = DateTimeOffset.UtcNow;
+            await dbContext.SowingProposals.Where(item => item.Id == message.JobId && item.Status == SowingProposalStatus.Processing)
+                .ExecuteUpdateAsync(update => update
+                    .SetProperty(item => item.Status, SowingProposalStatus.Pending)
+                    .SetProperty(item => item.UpdatedAt, retryAt)
+                    .SetProperty(item => item.StatusChangedAt, retryAt)
+                    .SetProperty(item => item.StatusVersion, item => item.StatusVersion + 1), CancellationToken.None);
+            throw;
+        }
         try
         {
             var snapshot = JsonSerializer.Deserialize<ProposalSnapshot>(proposal.InputSnapshotJson,
@@ -203,6 +226,13 @@ public sealed class SowingPlanConsumer(
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
+            var retryAt = DateTimeOffset.UtcNow;
+            await dbContext.SowingProposals.Where(item => item.Id == message.JobId && item.Status == SowingProposalStatus.Processing)
+                .ExecuteUpdateAsync(update => update
+                    .SetProperty(item => item.Status, SowingProposalStatus.Pending)
+                    .SetProperty(item => item.UpdatedAt, retryAt)
+                    .SetProperty(item => item.StatusChangedAt, retryAt)
+                    .SetProperty(item => item.StatusVersion, item => item.StatusVersion + 1), CancellationToken.None);
             throw;
         }
         catch (GeminiConfigurationException)
@@ -218,6 +248,12 @@ public sealed class SowingPlanConsumer(
         catch (GeminiProviderException)
         {
             proposal.MarkFailed("GEMINI_GENERATION_FAILED", "A safe draft could not be generated; no agronomic guidance was saved.", DateTimeOffset.UtcNow);
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            logger.LogError("Sowing proposal {JobId} failed after being claimed ({ExceptionType}).", message.JobId, exception.GetType().Name);
+            proposal.MarkFailed("PROPOSAL_PROCESSING_FAILED", "The proposal could not be processed; submit a new request to retry.", DateTimeOffset.UtcNow);
             await dbContext.SaveChangesAsync(cancellationToken);
         }
     }

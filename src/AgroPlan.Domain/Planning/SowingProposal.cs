@@ -3,9 +3,10 @@ namespace AgroPlan.Domain.Planning;
 public enum SowingProposalStatus
 {
     Pending = 0,
-    Completed = 1,
-    Failed = 2,
-    Confirmed = 3
+    Processing = 1,
+    Completed = 2,
+    Failed = 3,
+    Confirmed = 4
 }
 
 public sealed class SowingProposal
@@ -57,7 +58,7 @@ public sealed class SowingProposal
 
     public void MarkCompleted(string resultJson, DateTimeOffset completedAt)
     {
-        if (Status != SowingProposalStatus.Pending) return;
+        if (Status is not (SowingProposalStatus.Pending or SowingProposalStatus.Processing)) return;
         if (string.IsNullOrWhiteSpace(resultJson)) throw new ArgumentException("Result is required.", nameof(resultJson));
         ResultJson = resultJson;
         FailureCode = null;
@@ -67,7 +68,7 @@ public sealed class SowingProposal
 
     public void MarkFailed(string code, string summary, DateTimeOffset failedAt)
     {
-        if (Status != SowingProposalStatus.Pending) return;
+        if (Status is not (SowingProposalStatus.Pending or SowingProposalStatus.Processing)) return;
         if (string.IsNullOrWhiteSpace(code)) throw new ArgumentException("Failure code is required.", nameof(code));
         if (string.IsNullOrWhiteSpace(summary)) throw new ArgumentException("Failure summary is required.", nameof(summary));
         FailureCode = code.Trim();
