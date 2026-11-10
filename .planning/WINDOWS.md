@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 1
+open_count: 2
 waived_count: 0
 fixed_count: 1
-total_count: 2
-last_updated: 2026-11-10T03:43:26.453Z
+total_count: 3
+last_updated: 2026-11-10T04:47:15.572Z
 ---
 
 # Broken Windows Ledger
@@ -17,6 +17,7 @@ last_updated: 2026-11-10T03:43:26.453Z
 |----|-------|------|------|------|-------------|--------|--------|-------------|-------------|
 | 1 | 01 | stub | src/AgroPlan.Worker/Program.cs |  | Worker entry point is intentionally idle; proposal consumers are owned by later phase plans. | open |  | 2026-11-10T03:34:14.012Z |  |
 | 2 | 01 | unrun-verify | src/AgroPlan.sln |  | Initial compile-only check was deferred while .NET SDK 10 was missing; completed successfully with SDK 10.0.403 after local setup. | fixed |  | 2026-11-10T03:34:15.140Z | 2026-11-10T03:43:26.453Z |
+| 3 | 01 | stub | src/AgroPlan.Worker/Jobs/SowingPlanConsumer.cs |  | Proposal generation returns explicit provider-not-configured failure until Plan 01-06 supplies Gemini/provider processing; no draft is fabricated. | open |  | 2026-11-10T04:47:15.572Z |  |
 
 ````json
 [
@@ -44,6 +45,19 @@ last_updated: 2026-11-10T03:43:26.453Z
     "reason": "",
     "recorded_at": "2026-11-10T03:34:15.140Z",
     "resolved_at": "2026-11-10T03:43:26.453Z",
+    "milestone": null
+  },
+  {
+    "id": 3,
+    "kind": "stub",
+    "phase": "01",
+    "file": "src/AgroPlan.Worker/Jobs/SowingPlanConsumer.cs",
+    "line": null,
+    "description": "Proposal generation returns explicit provider-not-configured failure until Plan 01-06 supplies Gemini/provider processing; no draft is fabricated.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-11-10T04:47:15.572Z",
+    "resolved_at": null,
     "milestone": null
   }
 ]
