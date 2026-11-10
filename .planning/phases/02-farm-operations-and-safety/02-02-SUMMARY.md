@@ -12,12 +12,12 @@ provides:
   - Exact validated application-frequency assessment with provenance and safe unavailable states
 affects: [harvest-safety, crop-calendars, operational-reports]
 actuals:
-  tokens: 13536
+  tokens: 14096
   tasks: 2
-  commits: 3
-commits: 3
+  commits: 5
+commits: 5
 plan_head_before: 6be6be8036b3c7303ba82da05d3be6d2a35b12dd
-plan_head_after: b0ef3b9f1528bd68438a9812a74b720b5336abd0
+plan_head_after: ed0cbacf1ad82b9f6df44a968a13af256cd19c9b
 tech-stack:
   added: []
   patterns: ["Append-only farm event tables with PostgreSQL mutation guards", "Exact validated rule evaluation with explicit unavailable status"]
@@ -86,12 +86,16 @@ coverage:
 - Added structured product application records with crop/use/product identity, method, amount/unit, and immutable linked corrections.
 - Added validated frequency rules keyed by product, formulation, crop/use and jurisdiction. Unknown, stale, unvalidated, or ambiguous rule sets report unavailable with an evidence reason; no limit is inferred.
 - Prevented client-supplied PHI values from entering the application contract; harvest safety remains owned by the exact-label safety evaluator.
+- Preserved producer-cited label source/version as unverified metadata, never as PHI authority.
 
 ## Task Commits
 
 1. **Task 1: Record farm irrigation with original source fields** — `a8de38d` (`feat`)
 2. **Task 2: Record input applications for exact product and crop use** — `253a4de` (`feat`)
 3. **Task 2 test follow-up: Propagate xUnit cancellation tokens** — `b0ef3b9` (`test`)
+4. **Task 2 follow-up: Retain cited label version as unverified evidence** — `ed0cbac` (`feat`)
+
+**Plan metadata:** `dec457f` (initial summary and state update; superseded by this final summary update)
 
 ## Files Created/Modified
 
@@ -107,6 +111,7 @@ coverage:
 ## Decisions Made
 
 - Product label PHI is not accepted as application input authority. The separate harvest evaluator must resolve current validated label evidence before allowing a harvest.
+- A cited label identity/version is preserved only as unverified evidence supplied by the producer; the record explicitly reports `labelEvidenceStatus: unverified`.
 - Frequency assessment fails closed to unavailable if there is no single exact validated rule effective for the Dominican jurisdiction at assessment time.
 - Corrections remain linked immutable operations and do not double-count superseded application records in the frequency evaluator.
 
@@ -161,8 +166,8 @@ None - no external service configuration required.
 ## Self-Check: PASSED
 
 - All files created by both tasks exist; build succeeds with no errors.
-- Task commits `a8de38d`, `253a4de`, and `b0ef3b9` are reachable from `develop`.
-- Unit tests: 63 passed, 0 failed, 0 skipped.
+- Task commits `a8de38d`, `253a4de`, `b0ef3b9`, and `ed0cbac` are reachable from `develop`.
+- Unit tests: 64 passed, 0 failed, 0 skipped.
 - API integration tests: 13 passed, 0 failed, 0 skipped.
 
 ---
