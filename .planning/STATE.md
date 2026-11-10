@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 3
 current_phase_name: Workforce and Offline Operations
 status: executing
-stopped_at: Completed 03-04-PLAN.md
-last_updated: "2026-11-10T22:14:26.912Z"
+stopped_at: Completed 03-05-PLAN.md
+last_updated: "2026-11-10T22:36:12.909Z"
 last_activity: 2026-11-10
 last_activity_desc: Phase 3 execution started
-state_head: 3d0335c0cd11413526080e498b47f52e28943007
+state_head: "0ba690a41147e3f7fa81ecac9c08d86cf8559d54"
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 27
-  completed_plans: 24
+  completed_plans: 25
   percent: 33
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-11-09)
 ## Current Position
 
 Phase: 3 (Workforce and Offline Operations) — EXECUTING
-Plan: 5 of 7
+Plan: 6 of 7
 Status: Ready to execute
 Last activity: 2026-11-10 — Phase 3 execution started
 
@@ -66,6 +66,7 @@ Progress: ████████░░ [███░░░░░░░] 33%
 | Phase 03 P02 | 23 min | 3 tasks | 28 files |
 | Phase 03 P03 | 21m | 2 tasks | 19 files |
 | Phase 03 P04 | 22min | 2 tasks | 18 files |
+| Phase 03 P05 | 20m | 2 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -109,6 +110,8 @@ Progress: ████████░░ [███░░░░░░░] 33%
 - [Phase 03]: Use explicit farm time zones for streaks, and keep rankings disabled until a farm administrator enables them.
 - [Phase 03]: Record manual rewards as auditable non-payment entries without publishing payment events.
 - [Phase 03]: Task-level award criteria are stored with assignments and limited to verified completion plus finalized evidence presence.
+- [Phase 03]: Keep route generation unavailable until a provider is approved and validated parcel coordinates are available; never infer coordinates from free-text locations.
+- [Phase 03]: Store only ordered task ids and available GeoJSON offline; administrator confirmation is required, and task or parcel changes stale the current route version.
 
 ### Pending Todos
 
@@ -127,6 +130,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-10T22:14:01.208Z
-Stopped at: Completed 03-04-PLAN.md
-Resume file: 03-05-PLAN.md
+Last session: 2026-11-10T22:36:11.644Z
+Stopped at: Completed 03-05-PLAN.md
+Resume file: 03-06-PLAN.md
