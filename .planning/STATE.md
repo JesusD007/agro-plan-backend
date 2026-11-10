@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 2
 current_phase_name: Farm Operations and Safety
 status: executing
-stopped_at: Completed 02-03-PLAN.md
-last_updated: "2026-11-10T14:17:04.040Z"
+stopped_at: Completed 02-04-PLAN.md
+last_updated: "2026-11-10T14:40:44.411Z"
 last_activity: 2026-11-10
 last_activity_desc: Phase 2 execution started
-state_head: eb1024f68e8785d5804e0d45c07b5eeb64224f40
+state_head: b41de78f6e76c9137012e55e7bf29875f9c0f914
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 20
-  completed_plans: 15
+  completed_plans: 16
   percent: 17
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-11-09)
 ## Current Position
 
 Phase: 2 (Farm Operations and Safety) — EXECUTING
-Plan: 4 of 8
+Plan: 5 of 8
 Status: Ready to execute
 Last activity: 2026-11-10 — Phase 2 execution started
 
@@ -56,6 +56,7 @@ Progress: ████████░░ [██░░░░░░░░] 17%
 | Phase 2 P1 | 9m | 2 tasks | 9 files |
 | Phase 2 P02 | 8min | 2 tasks | 13 files |
 | Phase 02 P03 | 20min | 2 tasks | 9 files |
+| Phase 2 P04 | 23m | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -78,6 +79,9 @@ Progress: ████████░░ [██░░░░░░░░] 17%
 - [Phase 01]: Use AWS SDK S3 SigV4 for Supabase direct uploads to meet the ten-minute expiry; keep keys server-side and require a private, size-limited bucket.
 - [Phase 2]: Application-frequency assessments use only one exact, current, validated product/crop/use/jurisdiction rule; otherwise the API returns unavailable.
 - [Phase 2]: Client-supplied PHI cannot authorize harvest; exact label evidence is evaluated by the harvest-safety workflow.
+- [Phase 2]: Only exact validated pesticide product/crop/use PHI evidence authorizes harvest.
+- [Phase 2]: PHI remains distinct from MRL and worker re-entry intervals.
+- [Phase 2]: Validated label evidence and harvest records are immutable; changes append linked versions.
 
 ### Pending Todos
 
@@ -96,6 +100,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-10T14:17:03.549Z
-Stopped at: Completed 02-03-PLAN.md
+Last session: 2026-11-10T14:40:43.679Z
+Stopped at: Completed 02-04-PLAN.md
 Resume file: None

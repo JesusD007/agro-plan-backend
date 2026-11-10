@@ -546,7 +546,7 @@ Each documented requirement is assigned to exactly one roadmap phase. The six pi
 | REQ-rf-g-02 | Phase 2: Farm Operations and Safety | Complete |
 | REQ-rf-g-03 | Phase 2: Farm Operations and Safety | Pending |
 | REQ-rf-g-04 | Phase 2: Farm Operations and Safety | Pending |
-| REQ-rf-g-07 | Phase 2: Farm Operations and Safety | Pending |
+| REQ-rf-g-07 | Phase 2: Farm Operations and Safety | Complete |
 | REQ-rf-g-08 | Phase 2: Farm Operations and Safety | Complete |
 | REQ-rf-g-13 | Phase 2: Farm Operations and Safety | Pending |
 | REQ-rf-g-15 | Phase 2: Farm Operations and Safety | Pending |
@@ -557,7 +557,7 @@ Each documented requirement is assigned to exactly one roadmap phase. The six pi
 | REQ-rf-g-35 | Phase 2: Farm Operations and Safety | Complete |
 | REQ-rf-g-36 | Phase 2: Farm Operations and Safety | Pending |
 | REQ-rf-g-37 | Phase 2: Farm Operations and Safety | Pending |
-| REQ-rf-g-42 | Phase 2: Farm Operations and Safety | Pending |
+| REQ-rf-g-42 | Phase 2: Farm Operations and Safety | Complete |
 | REQ-rf-g-06 | Phase 3: Workforce and Offline Operations | Pending |
 | REQ-rf-g-09 | Phase 3: Workforce and Offline Operations | Pending |
 | REQ-rf-g-12 | Phase 3: Workforce and Offline Operations | Pending |
