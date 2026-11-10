@@ -20,6 +20,14 @@ public sealed class Farm
     public string? Location { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public ICollection<FarmMembership> Memberships { get; private set; } = new List<FarmMembership>();
+    public ICollection<Parcel> Parcels { get; private set; } = new List<Parcel>();
+
+    public void Update(string name, string? location)
+    {
+        if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Farm name is required.", nameof(name));
+        Name = name.Trim();
+        Location = string.IsNullOrWhiteSpace(location) ? null : location.Trim();
+    }
 }
 
 public enum FarmRole
@@ -50,4 +58,17 @@ public sealed class FarmMembership
     public bool IsActive { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public Farm Farm { get; private set; } = null!;
+
+    public void SetRole(FarmRole role)
+    {
+        if (Role == FarmRole.Owner) throw new InvalidOperationException("Farm ownership cannot be changed through membership management.");
+        Role = role;
+        IsActive = true;
+    }
+
+    public void Revoke()
+    {
+        if (Role == FarmRole.Owner) throw new InvalidOperationException("Farm ownership cannot be revoked through membership management.");
+        IsActive = false;
+    }
 }

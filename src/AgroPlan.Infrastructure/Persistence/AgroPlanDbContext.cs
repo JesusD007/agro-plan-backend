@@ -11,6 +11,8 @@ public sealed class AgroPlanDbContext(DbContextOptions<AgroPlanDbContext> option
 {
     public DbSet<Farm> Farms => Set<Farm>();
     public DbSet<FarmMembership> FarmMemberships => Set<FarmMembership>();
+    public DbSet<Parcel> Parcels => Set<Parcel>();
+    public DbSet<FarmMembershipAuditEntry> FarmMembershipAuditEntries => Set<FarmMembershipAuditEntry>();
     public DbSet<RefreshSession> RefreshSessions => Set<RefreshSession>();
     public DbSet<RecoveryRequest> RecoveryRequests => Set<RecoveryRequest>();
     public DbSet<RecoveryAuditEntry> RecoveryAuditEntries => Set<RecoveryAuditEntry>();

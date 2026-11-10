@@ -20,6 +20,10 @@ public sealed class FarmConfiguration : IEntityTypeConfiguration<Farm>
             .WithOne(membership => membership.Farm)
             .HasForeignKey(membership => membership.FarmId)
             .OnDelete(DeleteBehavior.Cascade);
+        builder.HasMany(farm => farm.Parcels)
+            .WithOne(parcel => parcel.Farm)
+            .HasForeignKey(parcel => parcel.FarmId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }
 

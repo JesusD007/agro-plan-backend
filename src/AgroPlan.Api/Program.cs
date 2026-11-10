@@ -79,6 +79,7 @@ builder.Services.AddAuthorization(options =>
     });
 });
 builder.Services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, FarmMembershipAuthorizationHandler>();
+builder.Services.AddScoped<IFarmAuthorization, FarmAuthorizationService>();
 builder.Services.AddRateLimiter(options =>
 {
     options.AddPolicy("identity", httpContext => RateLimitPartition.GetFixedWindowLimiter(
