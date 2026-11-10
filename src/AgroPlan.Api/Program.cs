@@ -2,6 +2,7 @@ using AgroPlan.Api.Authorization;
 using AgroPlan.Api.Identity;
 using AgroPlan.Application.UseCases;
 using AgroPlan.Api.Hubs;
+using AgroPlan.Api.Services;
 using AgroPlan.Infrastructure.Identity;
 using AgroPlan.Infrastructure.Persistence;
 using AgroPlan.Application.Crops;
@@ -124,6 +125,7 @@ builder.Services.AddRateLimiter(options =>
 });
 builder.Services.AddControllers();
 builder.Services.AddSignalR();
+builder.Services.AddHostedService<JobStatusNotificationService>();
 builder.Services.AddHealthChecks();
 
 var app = builder.Build();
