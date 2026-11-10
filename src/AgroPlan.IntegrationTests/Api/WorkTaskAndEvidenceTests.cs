@@ -107,6 +107,8 @@ public sealed class WorkTaskAndEvidenceTests(PostgreSqlFixture database) : IAsyn
             Assert.Empty(await beforeApprovalDb.VerifiedWageEntries.Where(row => row.WorkTaskId == taskId).ToArrayAsync());
 
         TestData.SetBearer(_client, _workerId);
+        Assert.Equal(HttpStatusCode.BadRequest, (await _client.PostAsync(
+            $"/api/farms/{_farmId}/work-tasks/{taskId}/evidence/submit", null)).StatusCode);
         var correctionUpload = await _client.PostAsJsonAsync($"/api/farms/{_farmId}/work-tasks/{taskId}/evidence/uploads", new
         {
             clientOperationId = Guid.NewGuid(), contentType = "image/png", sizeBytes = 512L,

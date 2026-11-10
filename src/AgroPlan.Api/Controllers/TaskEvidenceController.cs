@@ -105,9 +105,24 @@ public sealed class TaskEvidenceController(AgroPlanDbContext db, IFileStorage st
         if (!await authorization.IsAssignedWorkerAsync(farmId, taskId, userId, ct)) return NotFound();
         var task = await db.WorkTasks.SingleOrDefaultAsync(row => row.FarmId == farmId && row.Id == taskId, ct);
         if (task is null) return NotFound();
-        var evidence = await db.TaskEvidenceSubmissions.AnyAsync(row => row.FarmId == farmId && row.WorkTaskId == taskId &&
-            row.WorkerUserId == userId && row.FinalizedAt != null, ct);
-        if (task.PhotoRequired && !evidence) return BadRequest(new { message = "A finalized photo is required for this task." });
+        var latestEvidence = await db.TaskEvidenceSubmissions.Where(row => row.FarmId == farmId && row.WorkTaskId == taskId &&
+            row.WorkerUserId == userId && row.FinalizedAt != null).OrderByDescending(row => row.Revision).FirstOrDefaultAsync(ct);
+        if (task.PhotoRequired && latestEvidence is null)
+            return BadRequest(new { message = "A finalized photo is required for this task." });
+        if (task.Status == WorkTaskStatus.CorrectionRequested)
+        {
+            var correctedSubmissionId = await db.TaskReviewDecisions.Where(row => row.FarmId == farmId &&
+                row.WorkTaskId == taskId && row.Action == TaskReviewAction.CorrectionRequested)
+                .OrderByDescending(row => row.DecidedAt).Select(row => row.SubmissionId).FirstOrDefaultAsync(ct);
+            if (correctedSubmissionId.HasValue)
+            {
+                var correctedRevision = await db.TaskEvidenceSubmissions.Where(row => row.FarmId == farmId &&
+                    row.WorkTaskId == taskId && row.Id == correctedSubmissionId.Value)
+                    .Select(row => (int?)row.Revision).SingleOrDefaultAsync(ct);
+                if (correctedRevision.HasValue && (latestEvidence is null || latestEvidence.Revision <= correctedRevision.Value))
+                    return BadRequest(new { message = "A new evidence revision is required to resubmit this correction." });
+            }
+        }
         try { task.Submit(DateTimeOffset.UtcNow); }
         catch (InvalidOperationException exception) { return Conflict(new { message = exception.Message }); }
         await db.SaveChangesAsync(ct);
