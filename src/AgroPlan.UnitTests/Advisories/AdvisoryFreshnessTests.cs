@@ -1,5 +1,6 @@
 using AgroPlan.Application.Abstractions;
 using AgroPlan.Infrastructure.Climate;
+using AgroPlan.Infrastructure.Prices;
 using Xunit;
 
 namespace AgroPlan.UnitTests.Advisories;
@@ -38,6 +39,36 @@ public sealed class AdvisoryFreshnessTests
         Assert.Equal(WeatherAdvisoryStatus.Stale, expired.Status);
         Assert.Equal(WeatherAdvisoryStatus.Unavailable, missingProvenance.Status);
         Assert.Equal("required_provenance_missing", missingProvenance.UnavailableReason);
+    }
+
+    [Fact]
+    public async Task Unconfigured_price_provider_returns_unavailable_and_no_numeric_amount()
+    {
+        var result = await new UnavailableReferencePriceProvider().GetAsync(
+            new(Guid.NewGuid(), "rice", null, "wholesale", "Hato Mayor", Now), CancellationToken.None);
+
+        Assert.Equal(ReferencePriceStatus.Unavailable, result.Status);
+        Assert.Equal("reference_price_source_not_configured", result.UnavailableReason);
+        Assert.Null(result.Amount);
+        Assert.Null(result.CurrencyCode);
+    }
+
+    [Fact]
+    public void Price_result_requires_provenance_and_expiry_to_be_current()
+    {
+        var valid = new ReferencePriceResult(ReferencePriceStatus.Available, 1350m, "rice", "Juma",
+            "wholesale", "Hato Mayor", "quintal", "DOP", "official-feed", "MIDA market bulletin",
+            Now.AddHours(-1), Now.AddHours(2), null, null);
+        var current = ReferencePriceFreshness.Evaluate(valid, Now);
+        var stale = ReferencePriceFreshness.Evaluate(valid with { ValidUntil = Now.AddSeconds(-1) }, Now);
+        var incomplete = ReferencePriceFreshness.Evaluate(valid with { Unit = null }, Now);
+
+        Assert.Equal(ReferencePriceStatus.Available, current.Status);
+        Assert.Equal("current", current.Freshness);
+        Assert.Equal("DOP", current.CurrencyCode);
+        Assert.Equal(ReferencePriceStatus.Stale, stale.Status);
+        Assert.Equal(ReferencePriceStatus.Unavailable, incomplete.Status);
+        Assert.Null(incomplete.Amount);
     }
 
     private static WeatherAdvisoryResult Weather(string area, DateTimeOffset from, DateTimeOffset to) => new(
