@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 01
 current_phase_name: Farm Planning Pilot
 status: executing
-stopped_at: Completed 01-07-PLAN.md
-last_updated: "2026-11-10T05:19:16.239Z"
+stopped_at: Completed 01-08-PLAN.md; Phase 1 complete
+last_updated: "2026-11-10T05:20:52.037Z"
 last_activity: 2026-11-10
-state_head: 69a8837488f28758242e375450d16ee8ad124a5f
+state_head: c11a3162464ef1919be5b74c4bb021c4201f7c34
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 8
-  completed_plans: 7
-  percent: 87.5
+  completed_plans: 8
+  percent: 0
 last_activity_desc: Initialized planning from the approved document set.
 ---
 
@@ -32,7 +32,7 @@ Plan: 8 of 8 in current phase
 Status: Executing
 Last activity: 2026-11-10
 
-Progress: ███████░░░ [███████░░░] 87.5%
+Progress: ████████░░ [██████████] 100%
 
 ## Performance Metrics
 
@@ -52,6 +52,7 @@ Progress: ███████░░░ [███████░░░] 87.5%
 | Phase 01 P05 | 75m | 2 tasks | 18 files |
 | Phase 01 P06 | 18m | 2 tasks | 14 files |
 | Phase 01 P07 | 12m | 2 tasks | 17 files |
+| Phase 01 P08 | 50min | 2 tasks | 17 files |
 
 ## Accumulated Context
 
@@ -71,6 +72,7 @@ Progress: ███████░░░ [███████░░░] 87.5%
 - [Phase 01]: Persist sowing requests and outbox events atomically; confirmed, idempotent broker delivery and advisory per-user SignalR notifications leave PostgreSQL authoritative.
 - [Phase 01]: Use official Google.GenAI 1.28.0 with server-side credentials; climate remains unavailable until a source is selected and validated, and incomplete drafts cannot be confirmed.
 - [Phase 01]: Calculate planting-frame capacity only from currently valid, sourced spacing rules and validated usable parcel geometry; missing inputs suppress estimates, and owner/administrator confirmation persists the selected frame.
+- [Phase 01]: Use AWS SDK S3 SigV4 for Supabase direct uploads to meet the ten-minute expiry; keep keys server-side and require a private, size-limited bucket.
 
 ### Pending Todos
 
@@ -89,6 +91,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-10T05:17:40.000Z
-Stopped at: Completed 01-07-PLAN.md
-Resume file: .planning/phases/01-farm-planning-pilot/01-08-PLAN.md
+Last session: 2026-11-10T05:20:51.990Z
+Stopped at: Completed 01-08-PLAN.md; Phase 1 complete
+Resume file: None
