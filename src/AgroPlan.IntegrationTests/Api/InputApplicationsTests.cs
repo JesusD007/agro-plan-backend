@@ -29,9 +29,9 @@ public sealed class InputApplicationsTests(PostgreSqlFixture postgres)
             parcelId, productRegistrationId = "REG-42", formulationId = "FORM-EC", cropId = "rice",
             intendedUseId = "fungicide-use", appliedAt, method = InputApplicationMethod.Drone,
             quantity = 2.5m, unit = "L/ha", phiDays = 0
-        });
+        }, TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.Created, append.StatusCode);
-        using var json = JsonDocument.Parse(await append.Content.ReadAsStringAsync());
+        using var json = JsonDocument.Parse(await append.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
         Assert.Equal("unavailable", json.RootElement.GetProperty("frequencyStatus").GetString());
         Assert.NotNull(json.RootElement.GetProperty("frequencyMissingEvidenceReason").GetString());
         Assert.False(json.RootElement.TryGetProperty("phiDays", out _));
@@ -41,19 +41,19 @@ public sealed class InputApplicationsTests(PostgreSqlFixture postgres)
             reason = "Corrected amount", productRegistrationId = "REG-42", formulationId = "FORM-EC",
             cropId = "rice", intendedUseId = "fungicide-use", appliedAt,
             method = InputApplicationMethod.Drone, quantity = 3m, unit = "L/ha"
-        });
+        }, TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.Created, correction.StatusCode);
-        using var correctionJson = JsonDocument.Parse(await correction.Content.ReadAsStringAsync());
+        using var correctionJson = JsonDocument.Parse(await correction.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
         Assert.Equal(originalId, correctionJson.RootElement.GetProperty("correctsEntryId").GetGuid());
-        using var crossFarm = await client.GetAsync($"/api/farms/{Guid.NewGuid()}/input-applications");
+        using var crossFarm = await client.GetAsync($"/api/farms/{Guid.NewGuid()}/input-applications", TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.Forbidden, crossFarm.StatusCode);
 
-        var rows = await db.InputApplicationEntries.Where(x => x.FarmId == farmId).ToListAsync();
+        var rows = await db.InputApplicationEntries.Where(x => x.FarmId == farmId).ToListAsync(TestContext.Current.CancellationToken);
         Assert.Equal(2, rows.Count);
         Assert.Equal("L/ha", Assert.Single(rows, x => x.Id == originalId).Unit);
-        var original = await db.InputApplicationEntries.SingleAsync(x => x.Id == originalId);
+        var original = await db.InputApplicationEntries.SingleAsync(x => x.Id == originalId, TestContext.Current.CancellationToken);
         db.InputApplicationEntries.Remove(original);
-        await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
+        await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync(TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -69,16 +69,16 @@ public sealed class InputApplicationsTests(PostgreSqlFixture postgres)
         db.ValidatedApplicationFrequencyRules.Add(new(Guid.NewGuid(), "REG-42", "FORM-EC", "rice", "fungicide-use",
             "DO", "MIDA label registry", "rev-2026-1", DateTimeOffset.UtcNow.AddDays(-10),
             DateTimeOffset.UtcNow.AddDays(10), 30, 3, 2, true));
-        await db.SaveChangesAsync();
+        await db.SaveChangesAsync(TestContext.Current.CancellationToken);
         TestData.SetBearer(client, owner);
         using var response = await client.PostAsJsonAsync($"/api/farms/{farmId}/input-applications", new
         {
             parcelId, productRegistrationId = "REG-42", formulationId = "FORM-EC", cropId = "rice",
             intendedUseId = "fungicide-use", appliedAt = DateTimeOffset.UtcNow,
             method = InputApplicationMethod.Manual, quantity = 1m, unit = "L"
-        });
+        }, TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-        using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
         Assert.Equal("compliant", json.RootElement.GetProperty("frequencyStatus").GetString());
         Assert.Equal("MIDA label registry", json.RootElement.GetProperty("frequencyRuleSource").GetString());
         Assert.Equal("rev-2026-1", json.RootElement.GetProperty("frequencyRuleVersion").GetString());

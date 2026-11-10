@@ -31,30 +31,30 @@ public sealed class IrrigationEntriesTests(PostgreSqlFixture postgres)
         TestData.SetBearer(client, owner);
         var occurredAt = DateTimeOffset.UtcNow.AddDays(-1);
         using var invalidReference = await client.PostAsJsonAsync($"/api/farms/{farmId}/irrigation-entries",
-            new { parcelId = foreignParcelId, method = IrrigationMethod.Drip, waterSource = "well", occurredAt });
+            new { parcelId = foreignParcelId, method = IrrigationMethod.Drip, waterSource = "well", occurredAt }, TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.BadRequest, invalidReference.StatusCode);
         using var append = await client.PostAsJsonAsync($"/api/farms/{farmId}/irrigation-entries",
-            new { parcelId, method = IrrigationMethod.Drip, waterSource = "well", occurredAt });
+            new { parcelId, method = IrrigationMethod.Drip, waterSource = "well", occurredAt }, TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.Created, append.StatusCode);
-        using var appendJson = JsonDocument.Parse(await append.Content.ReadAsStringAsync());
+        using var appendJson = JsonDocument.Parse(await append.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
         var originalId = appendJson.RootElement.GetProperty("id").GetGuid();
         using var correction = await client.PostAsJsonAsync($"/api/farms/{farmId}/irrigation-entries/{originalId}/corrections",
-            new { reason = "Source was canal", method = IrrigationMethod.Flood, waterSource = "community canal", occurredAt });
+            new { reason = "Source was canal", method = IrrigationMethod.Flood, waterSource = "community canal", occurredAt }, TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.Created, correction.StatusCode);
-        using var correctionJson = JsonDocument.Parse(await correction.Content.ReadAsStringAsync());
+        using var correctionJson = JsonDocument.Parse(await correction.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
         Assert.Equal(originalId, correctionJson.RootElement.GetProperty("correctsEntryId").GetGuid());
-        using var list = await client.GetAsync($"/api/farms/{farmId}/irrigation-entries");
+        using var list = await client.GetAsync($"/api/farms/{farmId}/irrigation-entries", TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.OK, list.StatusCode);
-        using var crossFarm = await client.GetAsync($"/api/farms/{Guid.NewGuid()}/irrigation-entries");
+        using var crossFarm = await client.GetAsync($"/api/farms/{Guid.NewGuid()}/irrigation-entries", TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.Forbidden, crossFarm.StatusCode);
 
         await using var scope = factory.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AgroPlanDbContext>();
-        var rows = await db.IrrigationEntries.Where(x => x.FarmId == farmId).ToListAsync();
+        var rows = await db.IrrigationEntries.Where(x => x.FarmId == farmId).ToListAsync(TestContext.Current.CancellationToken);
         Assert.Equal(2, rows.Count);
         Assert.Equal("well", Assert.Single(rows, x => x.Id == originalId).WaterSource);
-        var original = await db.IrrigationEntries.SingleAsync(x => x.Id == originalId);
+        var original = await db.IrrigationEntries.SingleAsync(x => x.Id == originalId, TestContext.Current.CancellationToken);
         db.IrrigationEntries.Remove(original);
-        await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
+        await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync(TestContext.Current.CancellationToken));
     }
 }
