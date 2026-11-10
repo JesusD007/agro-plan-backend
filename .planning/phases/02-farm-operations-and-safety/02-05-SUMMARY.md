@@ -98,6 +98,8 @@ plan_head_after: ef0980f6e8c28c093f0ba9977db3c93f15093423
 1. **Task 1: Evaluate validated crop calendars and stage guidance safely** — `54e460e` (`feat`)
 2. **Task 2: Persist and serve farm-scoped crop calendars** — `ef0980f` (`feat`)
 
+**Plan metadata:** `d26e6f6` (`docs`)
+
 ## Files Created/Modified
 
 - `src/AgroPlan.Domain/Calendars/CropCalendarTask.cs` — Immutable, sourced template and calendar result types.
