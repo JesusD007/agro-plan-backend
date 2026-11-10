@@ -48,7 +48,7 @@
 | Evidence and freshness | Every described reason maps to current calendar evidence or a current configured climate advisory with source, geography, issue/validity window, and version. | Treats missing, stale, or wrong-area data as current or as proof of no risk. | Critical |
 | Missing agronomic configuration | Missing calendar or crop-stage rules produce an explicit unavailable/missing state before provider invocation. | The model fills a gap with a plausible stage, fertilizer rate, threshold, or calendar date. | Critical |
 | Reviewability and language | Spanish wording is clear, concise, advisory, identifies why the deterministic proposal exists, and states that the producer must confirm it. | Presents the explanation as an instruction, approved technical advice, or confirmed change. | High |
-| Privacy and farm scope | Input contains only stable IDs, bounded task labels/diffs, and allowed evidence metadata for one authorized farm/cycle. | Includes names, contacts, credentials, exact location, raw financial entries, full logbook text, or another farm's records. | Critical |
+| Privacy and farm scope | Provider input contains only bounded positional task labels, deterministic date differences, and semantic evidence labels for one authorized proposal. Internal GUIDs, task keys, source-version strings, farm/cycle identifiers, and raw evidence IDs remain server-side. | Includes names, contacts, credentials, exact location, raw financial entries, internal identifiers, full logbook text, or another farm's records. | Critical |
 
 ### Expert Roles
 
@@ -112,7 +112,7 @@ public sealed record CalendarChangeExplanationDraft(
     string Provider);
 ```
 
-`CalendarTaskDiff` is a deterministic application DTO containing stable task IDs and server-computed before/after values. The model cannot supply or alter it.
+`CalendarTaskDiff` is a deterministic provider-facing DTO containing positional task labels and server-computed before/after values. Internal task keys and evidence identifiers stay server-side; the model cannot supply or alter the diff.
 
 ### Gemini Adapter Pattern
 
@@ -155,7 +155,7 @@ Server validation rejects malformed JSON, unknown/duplicate IDs, missing or extr
 1. Deterministic calendar logic loads one authorized farm/cycle and applicable versioned rules.
 2. It computes an immutable proposal and task/date differences. Missing or expired evidence produces `Unavailable` and stops before the provider call.
 3. A durable outbox job contains only the proposal identifier. The Worker reloads the proposal and minimal authorized evidence.
-4. The provider-neutral service requests a structured explanation; the Gemini adapter handles SDK details.
+4. The Worker maps internal evidence IDs to semantic labels and internal task keys to positional labels before the provider-neutral call. The Gemini adapter serializes only that sanitized projection.
 5. AgroPlan validates output against the exact proposal/evidence snapshot and persists it separately as an advisory draft with provider/model/prompt/schema versions.
 6. The API returns both deterministic differences and the explanation. The explanation cannot be submitted as mutation input.
 7. Producer confirmation references the deterministic proposal ID/version. The server rechecks current farm membership, proposal state, evidence/rule versions, freshness, and every safety hold before applying the proposed calendar changes.
@@ -164,6 +164,7 @@ Server validation rejects malformed JSON, unknown/duplicate IDs, missing or extr
 
 - PostgreSQL is authoritative for proposal input versions, deterministic differences, explanation state, cited evidence, provider metadata, and confirmation.
 - Persist no raw provider request/response beyond the validated draft needed by the product. Logs contain stable job/proposal IDs, duration, attempt, provider/model version, token counts when safely available, and a bounded failure category.
+- Before calling any provider, project immutable proposal data to generic positional task labels and semantic evidence labels (`validated_crop_calendar`, `confirmed_planting_record`). Never serialize proposal/farm/cycle/template/sowing GUIDs, opaque task keys, raw source-version strings, or internal evidence identifiers to the provider. Validate returned citations against only those semantic labels.
 - Do not send producer identity, advisor identity, contact information, credentials, exact coordinates, raw financial rows, unrelated logbook entries, or full application records.
 - Do not cache across farms. Any exact-result reuse would require a farm-safe hash of every deterministic input and evidence version and is outside Phase 2.
 

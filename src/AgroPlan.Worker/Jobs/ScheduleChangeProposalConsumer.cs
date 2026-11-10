@@ -104,7 +104,11 @@ public sealed class ScheduleChangeProposalConsumer(RabbitMqConnection connection
                 await db.SaveChangesAsync(token);
                 return;
             }
-            var input = new CalendarExplanationInput(proposal.Version, proposal.EvidenceVersion, proposal.Deltas, proposal.EvidenceIds);
+            // Keep persisted evidence identifiers on the server. The provider receives only a
+            // bounded projection with semantic citations and positional task labels; template,
+            // sowing, proposal, source-version, and client-authored task identifiers never cross
+            // the AI boundary.
+            var input = CreateProviderInput(proposal);
             var draft = await provider.ExplainCalendarChangeAsync(input, token);
             CalendarExplanationDraftValidator.Validate(input, draft);
             proposal.SetExplanation(draft, DateTimeOffset.UtcNow);
@@ -117,6 +121,20 @@ public sealed class ScheduleChangeProposalConsumer(RabbitMqConnection connection
             await db.SaveChangesAsync(CancellationToken.None);
             logger.LogWarning("Schedule explanation failed safely ({ExceptionType}).", ex.GetType().Name);
         }
+    }
+
+    private static CalendarExplanationInput CreateProviderInput(ScheduleChangeProposal proposal)
+    {
+        var evidenceIds = new[] { "validated_crop_calendar", "confirmed_planting_record" };
+        var deltas = proposal.Deltas.Select((delta, index) => new ScheduleTaskDelta(
+            $"task_{index + 1}", delta.PreviousDate, delta.ProposedDate,
+            ["validated_crop_calendar", "confirmed_planting_record"])).ToArray();
+
+        return new CalendarExplanationInput(
+            proposal.Version,
+            "current_validated_crop_calendar",
+            deltas,
+            evidenceIds);
     }
 
     private sealed class ProcessingLeaseActiveException : Exception { }

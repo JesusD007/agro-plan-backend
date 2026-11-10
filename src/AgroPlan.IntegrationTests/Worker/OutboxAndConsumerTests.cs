@@ -91,6 +91,15 @@ public sealed class OutboxAndConsumerTests(PostgreSqlRabbitFixture services)
             Assert.NotNull(stored);
             Assert.Equal(ScheduleChangeProposalStatus.Explained, stored.Status);
             Assert.Equal(1, provider.CalendarCalls);
+            var providerInput = Assert.IsType<CalendarExplanationInput>(provider.CalendarInput);
+            var providerPayload = JsonSerializer.Serialize(providerInput);
+            Assert.DoesNotContain(templateId.ToString("N"), providerPayload, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain(correctedSowingId.ToString("N"), providerPayload, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("source-v1", providerPayload, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("irrigation-check", providerPayload, StringComparison.OrdinalIgnoreCase);
+            Assert.Equal("task_1", Assert.Single(providerInput.Deltas).TaskKey);
+            Assert.Contains("validated_crop_calendar", providerInput.AllowedEvidenceIds);
+            Assert.Contains("confirmed_planting_record", providerInput.AllowedEvidenceIds);
             using var confirm = await client.PostAsJsonAsync($"/api/farms/{farmId}/crop-cycles/{cycleId}/schedule-change-proposals/{proposalId}/confirm", new { version = 1 });
             Assert.Equal(HttpStatusCode.OK, confirm.StatusCode);
             await using var finalScope = factory.Services.CreateAsyncScope();
@@ -338,8 +347,10 @@ public sealed class OutboxAndConsumerTests(PostgreSqlRabbitFixture services)
     {
         private int _calls;
         private int _calendarCalls;
+        private CalendarExplanationInput? _calendarInput;
         public int Calls => Volatile.Read(ref _calls);
         public int CalendarCalls => Volatile.Read(ref _calendarCalls);
+        public CalendarExplanationInput? CalendarInput => Volatile.Read(ref _calendarInput);
 
         public Task<AiProposalDraft> GenerateDraftAsync(SowingGenerationInput input, CancellationToken cancellationToken)
         {
@@ -350,6 +361,7 @@ public sealed class OutboxAndConsumerTests(PostgreSqlRabbitFixture services)
         public Task<CalendarExplanationDraft> ExplainCalendarChangeAsync(CalendarExplanationInput input, CancellationToken cancellationToken)
         {
             Interlocked.Increment(ref _calendarCalls);
+            Interlocked.Exchange(ref _calendarInput, input);
             return Task.FromResult(new CalendarExplanationDraft("La propuesta reorganiza la tarea según la guía aprobada; revísela y confirme si está de acuerdo.",
                 input.AllowedEvidenceIds.Take(1).ToArray(), "fake", "test-model", "test-prompt", "test-schema", DateTimeOffset.UtcNow));
         }
