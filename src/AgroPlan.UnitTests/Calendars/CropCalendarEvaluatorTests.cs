@@ -68,10 +68,31 @@ public sealed class CropCalendarEvaluatorTests
         Assert.Contains("confirmed_crop_cycle_progress", result.MissingInputs);
     }
 
-    private static CropCalendarTemplate Template(DateTimeOffset? effectiveUntil = null) => new(
+    [Fact]
+    public void One_operation_completes_at_most_one_task_of_the_same_kind()
+    {
+        var template = Template(tasks:
+        [
+            new CropCalendarTask("irrigate-1", "growth", "Irrigate first bed", "First irrigation.", 10, 1,
+                CropCalendarOperationKind.Irrigation),
+            new CropCalendarTask("irrigate-2", "growth", "Irrigate second bed", "Second irrigation.", 20, 2,
+                CropCalendarOperationKind.Irrigation)
+        ]);
+        var progress = new[] { new CalendarProgressEvent(Guid.NewGuid(), CropCalendarOperationKind.Irrigation, Now.AddDays(-2)) };
+
+        var result = CropCalendarEvaluator.Evaluate(CropId, new DateOnly(2026, 10, 1), template, progress, Now);
+
+        Assert.Equal("completed", result.Tasks[0].Status);
+        Assert.NotNull(result.Tasks[0].ConfirmedOperationId);
+        Assert.Equal("overdue", result.Tasks[1].Status);
+        Assert.Null(result.Tasks[1].ConfirmedOperationId);
+    }
+
+    private static CropCalendarTemplate Template(DateTimeOffset? effectiveUntil = null,
+        IReadOnlyCollection<CropCalendarTask>? tasks = null) => new(
         Guid.NewGuid(), CropId, "DO-NORTH-1", "MIDA approved dataset", "2026.2",
         CropCalendarTemplateStatus.Validated, null, null, Now.AddDays(-90), effectiveUntil,
         30, 40,
-        [new CropCalendarTask("irrigate", "growth", "Check irrigation", "Use the validated schedule.", 20, 1,
+        tasks ?? [new CropCalendarTask("irrigate", "growth", "Check irrigation", "Use the validated schedule.", 20, 1,
             CropCalendarOperationKind.Irrigation)]);
 }

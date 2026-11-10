@@ -13,7 +13,9 @@ public static class CropCalendarEvaluator
         if (!validTemplate) missing.Add(template is null ? "validated_crop_calendar_rule" : "current_matching_crop_calendar_rule");
         if (!plantingDate.HasValue) missing.Add("confirmed_planting_date");
 
-        var activeProgress = RemoveCorrected(progress).Where(item => item.OccurredAt <= asOf).ToArray();
+        var activeProgress = RemoveCorrected(progress).Where(item => item.OccurredAt <= asOf)
+            .OrderBy(item => item.OccurredAt).ToArray();
+        var unmatchedProgress = activeProgress.ToList();
         if (activeProgress.Length == 0) missing.Add("confirmed_crop_cycle_progress");
 
         if (!validTemplate || template is null)
@@ -25,9 +27,10 @@ public static class CropCalendarEvaluator
             foreach (var task in template.Tasks.OrderBy(item => item.Order))
             {
                 var due = plantingDate.Value.AddDays(task.DaysAfterPlanting);
-                var evidence = activeProgress.Where(item => item.Kind == task.CompletionEvidence &&
-                        DateOnly.FromDateTime(item.OccurredAt.UtcDateTime) >= plantingDate.Value)
-                    .OrderBy(item => item.OccurredAt).FirstOrDefault();
+                var evidenceIndex = unmatchedProgress.FindIndex(item => item.Kind == task.CompletionEvidence &&
+                    DateOnly.FromDateTime(item.OccurredAt.UtcDateTime) >= plantingDate.Value);
+                var evidence = evidenceIndex >= 0 ? unmatchedProgress[evidenceIndex] : null;
+                if (evidenceIndex >= 0) unmatchedProgress.RemoveAt(evidenceIndex);
                 var status = evidence is not null ? "completed" : due < DateOnly.FromDateTime(asOf.UtcDateTime) ? "overdue" : "scheduled";
                 tasks.Add(new(task.Key, task.Stage, task.Title, task.Instruction, due,
                     task.Order, status, evidence?.Id));
