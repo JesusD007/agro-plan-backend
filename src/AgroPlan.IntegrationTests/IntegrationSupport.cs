@@ -103,6 +103,7 @@ internal sealed class ApiTestFactory : WebApplicationFactory<AgroApi::Program>
                     descriptor.ServiceType == typeof(IHostedService) &&
                     descriptor.ImplementationType is { } implementationType &&
                     (implementationType == typeof(AgroApi::AgroPlan.Api.Services.JobStatusNotificationService) ||
+                     implementationType == typeof(AgroApi::AgroPlan.Api.Services.TaskScheduleNotificationConsumer) ||
                      implementationType == typeof(AgroPlan.Infrastructure.Messaging.OutboxPublisher))).ToArray();
                 foreach (var descriptor in backgroundServices)
                     services.Remove(descriptor);
