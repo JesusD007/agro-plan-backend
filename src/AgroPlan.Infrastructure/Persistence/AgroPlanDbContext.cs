@@ -2,6 +2,7 @@ using AgroPlan.Domain.Farms;
 using AgroPlan.Domain.Crops;
 using AgroPlan.Domain.Planning;
 using AgroPlan.Domain.Logbook;
+using AgroPlan.Domain.Calendars;
 using AgroPlan.Domain.Operations;
 using AgroPlan.Domain.Safety;
 using AgroPlan.Infrastructure.Identity;
@@ -36,6 +37,7 @@ public sealed class AgroPlanDbContext(DbContextOptions<AgroPlanDbContext> option
     public DbSet<ValidatedApplicationFrequencyRule> ValidatedApplicationFrequencyRules => Set<ValidatedApplicationFrequencyRule>();
     public DbSet<ValidatedProductLabel> ValidatedProductLabels => Set<ValidatedProductLabel>();
     public DbSet<HarvestEntry> HarvestEntries => Set<HarvestEntry>();
+    public DbSet<CropCalendarTemplate> CropCalendarTemplates => Set<CropCalendarTemplate>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
