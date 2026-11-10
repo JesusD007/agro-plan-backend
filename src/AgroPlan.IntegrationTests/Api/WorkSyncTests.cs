@@ -65,8 +65,73 @@ public sealed class WorkSyncTests(PostgreSqlFixture database) : IAsyncLifetime
         Assert.Equal(HttpStatusCode.OK, replay.StatusCode);
         var replayResult = await replay.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
         Assert.Equal("Replayed", replayResult.GetProperty("operations")[0].GetProperty("status").GetString());
+        var changedPayload = await _client.PostAsJsonAsync($"/api/farms/{_farmId}/work-sync", new
+        {
+            operations = new[]
+            {
+                new { operationId, taskId = _taskId, kind = "evidence.finalize", baseVersion = 1,
+                    payload = new { }, submissionId = Guid.NewGuid() }
+            }
+        });
+        Assert.Equal(HttpStatusCode.OK, changedPayload.StatusCode);
+        var changedResult = await changedPayload.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+        Assert.Equal("Conflict", changedResult.GetProperty("operations")[0].GetProperty("status").GetString());
         await using var db = database.CreateDbContext();
         Assert.Equal(1, await db.WorkTasks.CountAsync(task => task.Id == _taskId && task.Status == WorkTaskStatus.InProgress));
+        Assert.Equal(1, await db.SyncOperationReceipts.CountAsync(receipt => receipt.FarmId == _farmId && receipt.ClientOperationId == operationId));
+    }
+
+    [Fact]
+    public async Task Evidence_finalize_is_idempotent_and_a_failed_batch_item_does_not_stop_other_operations()
+    {
+        database.EnsureAvailable();
+        var taskId = Guid.NewGuid();
+        var submissionId = Guid.NewGuid();
+        var uploadOperationId = Guid.NewGuid();
+        var workerOperationId = Guid.NewGuid();
+        var now = DateTimeOffset.UtcNow;
+        await using (var db = database.CreateDbContext())
+        {
+            var task = new WorkTask(taskId, _farmId, _workerId, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1)),
+                "Upload irrigation photo", false, null, null, null, null);
+            task.Start();
+            db.WorkTasks.Add(task);
+            db.TaskEvidenceSubmissions.Add(new TaskEvidenceSubmission(submissionId, _farmId, taskId, _workerId,
+                1, null, uploadOperationId, $"farms/{_farmId:D}/work-tasks/{taskId:D}/evidence/{submissionId:D}/staging",
+                "image/png", 512, false, null, false, null, now, now.AddMinutes(10)));
+            await db.SaveChangesAsync();
+        }
+
+        TestData.SetBearer(_client, _workerId);
+        var invalidId = Guid.NewGuid();
+        var request = new
+        {
+            operations = new object[]
+            {
+                new { operationId = invalidId, taskId = Guid.NewGuid(), kind = "task.start", baseVersion = 1, payload = new { } },
+                new { operationId = workerOperationId, taskId, kind = "evidence.finalize", baseVersion = 1, payload = new { }, submissionId }
+            }
+        };
+        var first = await _client.PostAsJsonAsync($"/api/farms/{_farmId}/work-sync", request);
+        Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+        var firstResult = await first.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+        Assert.Equal("Rejected", firstResult.GetProperty("operations")[0].GetProperty("status").GetString());
+        Assert.Equal("Applied", firstResult.GetProperty("operations")[1].GetProperty("status").GetString());
+
+        var replay = await _client.PostAsJsonAsync($"/api/farms/{_farmId}/work-sync", new
+        {
+            operations = new[]
+            {
+                new { operationId = workerOperationId, taskId, kind = "evidence.finalize", baseVersion = 1, payload = new { }, submissionId }
+            }
+        });
+        Assert.Equal(HttpStatusCode.OK, replay.StatusCode);
+        var replayResult = await replay.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+        Assert.Equal("Replayed", replayResult.GetProperty("operations")[0].GetProperty("status").GetString());
+        Assert.Equal(submissionId, replayResult.GetProperty("operations")[0].GetProperty("submissionId").GetGuid());
+        await using var verifyDb = database.CreateDbContext();
+        Assert.Equal(1, await verifyDb.TaskEvidenceSubmissions.CountAsync(row => row.Id == submissionId && row.FinalizedAt != null));
+        Assert.Equal(1, await verifyDb.SyncOperationReceipts.CountAsync(row => row.ClientOperationId == workerOperationId));
     }
 
     private static ApplicationUser User(string id) => new()

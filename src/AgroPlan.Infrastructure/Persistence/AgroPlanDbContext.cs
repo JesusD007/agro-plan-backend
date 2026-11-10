@@ -48,6 +48,7 @@ public sealed class AgroPlanDbContext(DbContextOptions<AgroPlanDbContext> option
     public DbSet<TaskEvidenceSubmission> TaskEvidenceSubmissions => Set<TaskEvidenceSubmission>();
     public DbSet<TaskReviewDecision> TaskReviewDecisions => Set<TaskReviewDecision>();
     public DbSet<VerifiedWageEntry> VerifiedWageEntries => Set<VerifiedWageEntry>();
+    public DbSet<SyncOperationReceipt> SyncOperationReceipts => Set<SyncOperationReceipt>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

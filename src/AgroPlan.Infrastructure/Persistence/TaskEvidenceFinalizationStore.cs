@@ -16,7 +16,10 @@ public sealed class TaskEvidenceFinalizationStore(AgroPlanDbContext db) : ITaskE
                 member.UserId == workerUserId && member.IsActive && member.Role == FarmRole.Worker), cancellationToken);
         if (!isAssigned) return null;
 
-        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        var ownsTransaction = db.Database.CurrentTransaction is null;
+        await using var transaction = ownsTransaction
+            ? await db.Database.BeginTransactionAsync(cancellationToken)
+            : null;
         await db.Database.ExecuteSqlInterpolatedAsync($"SELECT \"Id\" FROM agro.work_tasks WHERE \"FarmId\" = {farmId} AND \"Id\" = {taskId} FOR UPDATE", cancellationToken);
         await db.Database.ExecuteSqlInterpolatedAsync($"SELECT \"Id\" FROM agro.task_evidence_submissions WHERE \"FarmId\" = {farmId} AND \"WorkTaskId\" = {taskId} AND \"Id\" = {submissionId} FOR UPDATE", cancellationToken);
         var submission = await db.TaskEvidenceSubmissions.SingleOrDefaultAsync(row => row.FarmId == farmId &&
@@ -32,7 +35,7 @@ public sealed class TaskEvidenceFinalizationStore(AgroPlanDbContext db) : ITaskE
             throw new InvalidOperationException("Evidence cannot be finalized unless the task is in progress or awaiting correction.");
         await finalizeObject(submission, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
+        if (ownsTransaction) await transaction!.CommitAsync(cancellationToken);
         return submission;
     }
 }
