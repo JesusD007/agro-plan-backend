@@ -11,11 +11,16 @@ using AgroPlan.Infrastructure.Email;
 using AgroPlan.Infrastructure.Messaging;
 using AgroPlan.Infrastructure.Storage;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.OpenApi;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi;
+using Scalar.AspNetCore;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -129,11 +134,36 @@ builder.Services.AddRateLimiter(options =>
         }));
 });
 builder.Services.AddControllers();
+builder.Services.AddOpenApi(options =>
+{
+    options.AddDocumentTransformer<BearerSecuritySchemeTransformer>();
+    options.AddOperationTransformer((operation, context, _) =>
+    {
+        var metadata = context.Description.ActionDescriptor.EndpointMetadata;
+        if (metadata?.OfType<IAuthorizeData>().Any() != true || metadata.OfType<IAllowAnonymous>().Any())
+            return Task.CompletedTask;
+
+        operation.Security ??= [];
+        operation.Security.Add(new OpenApiSecurityRequirement
+        {
+            [new OpenApiSecuritySchemeReference(JwtBearerDefaults.AuthenticationScheme, context.Document!)] = []
+        });
+        return Task.CompletedTask;
+    });
+});
 builder.Services.AddSignalR();
 builder.Services.AddHostedService<JobStatusNotificationService>();
 builder.Services.AddHealthChecks();
 
 var app = builder.Build();
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
+    app.MapScalarApiReference(options => options
+        .WithTitle("AgroPlan API")
+        .WithOpenApiRoutePattern("/openapi/{documentName}.json")
+        .AddPreferredSecuritySchemes(JwtBearerDefaults.AuthenticationScheme));
+}
 if (!app.Environment.IsDevelopment()) app.UseHsts();
 app.UseHttpsRedirection();
 app.UseRateLimiter();
@@ -144,3 +174,29 @@ app.MapIdentityEndpoints();
 app.MapControllers();
 app.MapHub<JobStatusHub>("/hubs/jobs");
 app.Run();
+
+internal sealed class BearerSecuritySchemeTransformer(IAuthenticationSchemeProvider authenticationSchemeProvider)
+    : IOpenApiDocumentTransformer
+{
+    public async Task TransformAsync(
+        OpenApiDocument document,
+        OpenApiDocumentTransformerContext context,
+        CancellationToken cancellationToken)
+    {
+        var schemes = await authenticationSchemeProvider.GetAllSchemesAsync();
+        if (!schemes.Any(scheme => scheme.Name == JwtBearerDefaults.AuthenticationScheme))
+            return;
+
+        document.Components ??= new OpenApiComponents();
+        document.Components.SecuritySchemes = new Dictionary<string, IOpenApiSecurityScheme>
+        {
+            [JwtBearerDefaults.AuthenticationScheme] = new OpenApiSecurityScheme
+            {
+                Type = SecuritySchemeType.Http,
+                Scheme = "bearer",
+                In = ParameterLocation.Header,
+                BearerFormat = "JWT"
+            }
+        };
+    }
+}
