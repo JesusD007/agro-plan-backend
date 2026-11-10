@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 2
 current_phase_name: Farm Operations and Safety
 status: executing
-stopped_at: Completed 02-04-PLAN.md
-last_updated: "2026-11-10T14:40:44.411Z"
+stopped_at: Completed 02-05-PLAN.md
+last_updated: "2026-11-10T15:06:39.224Z"
 last_activity: 2026-11-10
 last_activity_desc: Phase 2 execution started
-state_head: b41de78f6e76c9137012e55e7bf29875f9c0f914
+state_head: ef0980f6e8c28c093f0ba9977db3c93f15093423
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 20
-  completed_plans: 16
+  completed_plans: 17
   percent: 17
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-11-09)
 ## Current Position
 
 Phase: 2 (Farm Operations and Safety) — EXECUTING
-Plan: 5 of 8
+Plan: 6 of 8
 Status: Ready to execute
 Last activity: 2026-11-10 — Phase 2 execution started
 
@@ -57,6 +57,7 @@ Progress: ████████░░ [██░░░░░░░░] 17%
 | Phase 2 P02 | 8min | 2 tasks | 13 files |
 | Phase 02 P03 | 20min | 2 tasks | 9 files |
 | Phase 2 P04 | 23m | 2 tasks | 10 files |
+| Phase 02 P05 | 35m | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -82,6 +83,8 @@ Progress: ████████░░ [██░░░░░░░░] 17%
 - [Phase 2]: Only exact validated pesticide product/crop/use PHI evidence authorizes harvest.
 - [Phase 2]: PHI remains distinct from MRL and worker re-entry intervals.
 - [Phase 2]: Validated label evidence and harvest records are immutable; changes append linked versions.
+- [Phase 02]: Calendar estimates require a confirmed sowing date and a current validated crop template.
+- [Phase 02]: Estimated harvest windows are informational and do not bypass exact validated PHI eligibility.
 
 ### Pending Todos
 
@@ -100,6 +103,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-10T14:40:43.679Z
-Stopped at: Completed 02-04-PLAN.md
+Last session: 2026-11-10T15:06:36.177Z
+Stopped at: Completed 02-05-PLAN.md
 Resume file: None
