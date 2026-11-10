@@ -19,6 +19,7 @@ public sealed class AgroPlanDbContext(DbContextOptions<AgroPlanDbContext> option
     public DbSet<RecoveryAuditEntry> RecoveryAuditEntries => Set<RecoveryAuditEntry>();
     public DbSet<CropCatalogEntry> CropCatalogEntries => Set<CropCatalogEntry>();
     public DbSet<AgronomicParameter> AgronomicParameters => Set<AgronomicParameter>();
+    public DbSet<CropCycle> CropCycles => Set<CropCycle>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

@@ -18,36 +18,38 @@ public sealed class CropCatalogService(ICropCatalogRepository repository)
     {
         var entries = await repository.ListAsync(cancellationToken);
         var today = DateTimeOffset.UtcNow;
-        return entries.Select(entry =>
-        {
-            var usableParameters = entry.Parameters
-                .Where(parameter => parameter.IsUsableAt(today))
-                .Select(parameter => new AgronomicParameterItem(
-                    parameter.Key,
-                    parameter.NumericValue!.Value,
-                    parameter.Unit!,
-                    parameter.SourceName!,
-                    parameter.SourceUrl,
-                    parameter.Region,
-                    parameter.ValidFrom,
-                    parameter.ValidTo))
-                .OrderBy(parameter => parameter.Key, StringComparer.Ordinal)
-                .ToArray();
-            var usableKeys = usableParameters.Select(parameter => parameter.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
-            var missing = RequiredParameterKeys.Where(key => !usableKeys.Contains(key)).ToArray();
+        return entries.Select(entry => ToItem(entry, today)).ToArray();
+    }
 
-            return new CropCatalogItem(
-                entry.Id,
-                entry.Code,
-                entry.DisplayName,
-                entry.SourceName,
-                entry.ValidationStatus.ToString(),
-                entry.Region,
-                entry.ValidFrom,
-                entry.ValidTo,
-                usableParameters,
-                missing);
-        }).ToArray();
+    public static CropCatalogItem ToItem(AgroPlan.Domain.Crops.CropCatalogEntry entry, DateTimeOffset at)
+    {
+        var usableParameters = entry.Parameters
+            .Where(parameter => parameter.IsUsableAt(at))
+            .Select(parameter => new AgronomicParameterItem(
+                parameter.Key,
+                parameter.NumericValue!.Value,
+                parameter.Unit!,
+                parameter.SourceName!,
+                parameter.SourceUrl,
+                parameter.Region,
+                parameter.ValidFrom,
+                parameter.ValidTo))
+            .OrderBy(parameter => parameter.Key, StringComparer.Ordinal)
+            .ToArray();
+        var usableKeys = usableParameters.Select(parameter => parameter.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var missing = RequiredParameterKeys.Where(key => !usableKeys.Contains(key)).ToArray();
+
+        return new CropCatalogItem(
+            entry.Id,
+            entry.Code,
+            entry.DisplayName,
+            entry.SourceName,
+            entry.ValidationStatus.ToString(),
+            entry.Region,
+            entry.ValidFrom,
+            entry.ValidTo,
+            usableParameters,
+            missing);
     }
 }
 
