@@ -543,7 +543,7 @@ Each documented requirement is assigned to exactly one roadmap phase. The six pi
 | REQ-pilot-test-suite | Phase 1: Farm Planning Pilot | Complete (46 unit + 9 PostgreSQL/RabbitMQ integration tests pass) |
 | REQ-pilot-api-docs | Phase 1: Farm Planning Pilot | Complete (Development OpenAPI/Scalar available; routes absent in Production) |
 | REQ-pilot-provider-neutral-ai | Phase 1: Farm Planning Pilot | Complete (IAiProposalProvider contract; Gemini is the current adapter) |
-| REQ-rf-g-02 | Phase 2: Farm Operations and Safety | Pending |
+| REQ-rf-g-02 | Phase 2: Farm Operations and Safety | Complete |
 | REQ-rf-g-03 | Phase 2: Farm Operations and Safety | Pending |
 | REQ-rf-g-04 | Phase 2: Farm Operations and Safety | Pending |
 | REQ-rf-g-07 | Phase 2: Farm Operations and Safety | Pending |
