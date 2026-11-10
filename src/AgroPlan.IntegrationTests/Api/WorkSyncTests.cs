@@ -14,6 +14,7 @@ public sealed class WorkSyncTests(PostgreSqlFixture database) : IAsyncLifetime
 {
     private readonly string _ownerId = $"sync-owner-{Guid.NewGuid():N}";
     private readonly string _workerId = $"sync-worker-{Guid.NewGuid():N}";
+    private readonly string _otherWorkerId = $"sync-other-worker-{Guid.NewGuid():N}";
     private readonly Guid _farmId = Guid.NewGuid();
     private readonly Guid _taskId = Guid.NewGuid();
     private HttpClient _client = null!;
@@ -25,9 +26,10 @@ public sealed class WorkSyncTests(PostgreSqlFixture database) : IAsyncLifetime
         await using var db = database.CreateDbContext();
         var now = DateTimeOffset.UtcNow;
         db.Farms.Add(new Farm(_farmId, "Sync test farm", "Test", now));
-        db.Users.AddRange(User(_ownerId), User(_workerId));
+        db.Users.AddRange(User(_ownerId), User(_workerId), User(_otherWorkerId));
         db.FarmMemberships.AddRange(new FarmMembership(_farmId, _ownerId, FarmRole.Owner, now),
-            new FarmMembership(_farmId, _workerId, FarmRole.Worker, now));
+            new FarmMembership(_farmId, _workerId, FarmRole.Worker, now),
+            new FarmMembership(_farmId, _otherWorkerId, FarmRole.Worker, now));
         db.WorkTasks.Add(new WorkTask(_taskId, _farmId, _workerId, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1)),
             "Inspect irrigation", false, null, null, null, null));
         await db.SaveChangesAsync();
@@ -129,6 +131,18 @@ public sealed class WorkSyncTests(PostgreSqlFixture database) : IAsyncLifetime
         var replayResult = await replay.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
         Assert.Equal("Replayed", replayResult.GetProperty("operations")[0].GetProperty("status").GetString());
         Assert.Equal(submissionId, replayResult.GetProperty("operations")[0].GetProperty("submissionId").GetGuid());
+        TestData.SetBearer(_client, _otherWorkerId);
+        var foreignWorker = await _client.PostAsJsonAsync($"/api/farms/{_farmId}/work-sync", new
+        {
+            operations = new[]
+            {
+                new { operationId = Guid.NewGuid(), taskId, kind = "evidence.finalize", baseVersion = 1, payload = new { }, submissionId }
+            }
+        });
+        Assert.Equal(HttpStatusCode.OK, foreignWorker.StatusCode);
+        var foreignWorkerResult = await foreignWorker.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+        Assert.Equal("Rejected", foreignWorkerResult.GetProperty("operations")[0].GetProperty("status").GetString());
+        TestData.SetBearer(_client, _workerId);
         await using var verifyDb = database.CreateDbContext();
         Assert.Equal(1, await verifyDb.TaskEvidenceSubmissions.CountAsync(row => row.Id == submissionId && row.FinalizedAt != null));
         Assert.Equal(1, await verifyDb.SyncOperationReceipts.CountAsync(row => row.ClientOperationId == workerOperationId));
@@ -156,18 +170,23 @@ public sealed class WorkSyncTests(PostgreSqlFixture database) : IAsyncLifetime
         Assert.Equal(2, currentResult.GetProperty("operations")[0].GetProperty("taskVersion").GetInt32());
 
         var conflictOperationId = Guid.NewGuid();
-        var stale = await _client.PostAsJsonAsync($"/api/farms/{_farmId}/work-sync", new
+        var staleRequest = new
         {
             operations = new[]
             {
                 new { operationId = conflictOperationId, taskId = _taskId, kind = "task.update", baseVersion = 1,
                     payload = new { description = "Client version", dueDate } }
             }
-        });
+        };
+        var stale = await _client.PostAsJsonAsync($"/api/farms/{_farmId}/work-sync", staleRequest);
         Assert.Equal(HttpStatusCode.OK, stale.StatusCode);
         var staleResult = await stale.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
         Assert.Equal("Conflict", staleResult.GetProperty("operations")[0].GetProperty("status").GetString());
         var conflictId = staleResult.GetProperty("operations")[0].GetProperty("conflictId").GetGuid();
+        var staleReplay = await _client.PostAsJsonAsync($"/api/farms/{_farmId}/work-sync", staleRequest);
+        var staleReplayResult = await staleReplay.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+        Assert.Equal("Replayed", staleReplayResult.GetProperty("operations")[0].GetProperty("status").GetString());
+        Assert.Equal(conflictId, staleReplayResult.GetProperty("operations")[0].GetProperty("conflictId").GetGuid());
         await using (var db = database.CreateDbContext())
             Assert.Equal("Server version", (await db.WorkTasks.SingleAsync(task => task.Id == _taskId)).Description);
 
