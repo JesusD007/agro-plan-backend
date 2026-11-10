@@ -3,6 +3,7 @@ using AgroPlan.Domain.Crops;
 using AgroPlan.Domain.Planning;
 using AgroPlan.Domain.Logbook;
 using AgroPlan.Domain.Operations;
+using AgroPlan.Domain.Safety;
 using AgroPlan.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -33,6 +34,8 @@ public sealed class AgroPlanDbContext(DbContextOptions<AgroPlanDbContext> option
     public DbSet<IrrigationEntry> IrrigationEntries => Set<IrrigationEntry>();
     public DbSet<InputApplicationEntry> InputApplicationEntries => Set<InputApplicationEntry>();
     public DbSet<ValidatedApplicationFrequencyRule> ValidatedApplicationFrequencyRules => Set<ValidatedApplicationFrequencyRule>();
+    public DbSet<ValidatedProductLabel> ValidatedProductLabels => Set<ValidatedProductLabel>();
+    public DbSet<HarvestEntry> HarvestEntries => Set<HarvestEntry>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
