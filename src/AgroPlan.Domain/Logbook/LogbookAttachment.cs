@@ -45,4 +45,12 @@ public sealed class LogbookAttachment
         FinalizedAt = finalizedAt;
         FinalizingAt = null;
     }
+
+    public void ReplaceLegacyObjectKey(string objectKey)
+    {
+        if (!FinalizedAt.HasValue || !string.Equals(ObjectKey, UploadObjectKey, StringComparison.Ordinal))
+            throw new InvalidOperationException("Only legacy finalized attachments can be migrated to immutable storage.");
+        ObjectKey = objectKey;
+        FinalizingAt = null;
+    }
 }
