@@ -1,0 +1,13 @@
+{
+  "source_path": "C:\\Users\\romer\\Lgsus\\Proyecto Agro\\agro-plan-backend\\.codex\\.gsd-staging\\user-artifacts\\agroplan-docs\\AgroPlan - Documentacion Funcional.md",
+  "type": "PRD",
+  "confidence": "high",
+  "manifest_override": true,
+  "title": "AgroPlan — Documentación Funcional",
+  "summary": "Define objetivos, actores, alcance y requisitos funcionales de AgroPlan Gestión y AgroPlan Mercado para agricultura dominicana.",
+  "scope": ["AgroPlan Gestión", "AgroPlan Mercado", "productores", "trabajadores", "asesores", "compradores", "transportistas", "planificación agrícola", "bitácora", "costos", "IA", "mercado digital", "trazabilidad", "offline"],
+  "cross_refs": ["AgroPlan - Version01.docx", "message.txt"],
+  "locked": false,
+  "precedence": 3,
+  "notes": "Manifest assigns PRD; document explicitly states that technical decisions are documented separately."
+}

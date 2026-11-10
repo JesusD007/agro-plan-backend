@@ -1,0 +1,27 @@
+{
+  "source_path": "C:\\Users\\romer\\Lgsus\\Proyecto Agro\\agro-plan-backend\\.codex\\.gsd-staging\\user-artifacts\\agroplan-docs\\AgroPlan - Alcance y Permisos del Piloto.md",
+  "type": "PRD",
+  "confidence": "high",
+  "manifest_override": true,
+  "title": "AgroPlan Gestión — Alcance y matriz de permisos del piloto",
+  "summary": "Define el alcance confirmado del piloto, los roles y permisos por finca, y los requisitos pendientes para recuperación de cuenta.",
+  "scope": [
+    "cuentas",
+    "fincas",
+    "parcelas",
+    "cultivos",
+    "ciclos",
+    "planes de siembra",
+    "marco de cultivo",
+    "IA",
+    "clima",
+    "bitácora",
+    "roles",
+    "permisos",
+    "recuperación de cuenta"
+  ],
+  "cross_refs": [],
+  "locked": false,
+  "precedence": 2,
+  "notes": ""
+}

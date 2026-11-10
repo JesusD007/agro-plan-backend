@@ -1,0 +1,13 @@
+{
+  "source_path": "C:\\Users\\romer\\Lgsus\\Proyecto Agro\\agro-plan-backend\\.codex\\.gsd-staging\\user-artifacts\\agroplan-docs\\AgroPlan - Flujos de Datos por Actor y Función.md",
+  "type": "PRD",
+  "confidence": "high",
+  "manifest_override": true,
+  "title": "AgroPlan — Flujos de datos por actor y función",
+  "summary": "Define actor-based data flows across AgroPlan Gestión, Mercado, transportation, platform trust, and future equipment rental.",
+  "scope": ["AgroPlan Gestión", "AgroPlan Mercado", "transportation", "platform trust", "equipment rental", "producers", "workers", "advisors", "buyers", "carriers", "ASP.NET Core API", "Supabase", "RabbitMQ", "SignalR"],
+  "cross_refs": ["AgroPlan - Flujos de Datos y Modelo de Datos.md"],
+  "locked": false,
+  "precedence": 4,
+  "notes": "Manifest type and precedence were applied. The document labels itself conceptual and assigns Gestión to Phase 1, Mercado to Phase 2, and transport to Phase 3."
+}

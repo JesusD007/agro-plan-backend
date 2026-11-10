@@ -1,0 +1,13 @@
+{
+  "source_path": "C:\\Users\\romer\\Lgsus\\Proyecto Agro\\agro-plan-backend\\.codex\\.gsd-staging\\user-artifacts\\agroplan-docs\\AgroPlan - Diagrama Relacional Unificado.md",
+  "type": "SPEC",
+  "confidence": "high",
+  "manifest_override": true,
+  "title": "AgroPlan Gestión — Diagrama relacional unificado",
+  "summary": "Modelo relacional de trabajo para Gestión que define entidades, esquemas y relaciones, incluidas entidades fuera del piloto confirmado.",
+  "scope": ["identidad", "gestión de fincas", "parcelas", "ciclos de cultivo", "bitácora", "tareas", "archivos", "trabajos asíncronos", "sincronización", "permisos", "auditoría", "gamificación"],
+  "cross_refs": [],
+  "locked": false,
+  "precedence": 1,
+  "notes": ""
+}

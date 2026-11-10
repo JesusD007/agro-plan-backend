@@ -1,0 +1,12 @@
+{
+  "source_path": "C:/Users/romer/Lgsus/Proyecto Agro/agro-plan-backend/.codex/.gsd-staging/user-artifacts/agroplan-docs/Entrevista.txt",
+  "type": "DOC",
+  "confidence": "high",
+  "manifest_override": true,
+  "title": "Entrevista",
+  "summary": "Entrevista a un agrónomo sobre cultivos, prácticas, dificultades y condiciones agrícolas en Hermanas Mirabal.",
+  "scope": ["agricultura", "cultivos", "plagas", "riego", "fertilización", "cosecha", "Hermanas Mirabal"],
+  "cross_refs": [],
+  "locked": false,
+  "precedence": 5
+}

@@ -1,0 +1,13 @@
+{
+  "source_path": "C:/Users/romer/Lgsus/Proyecto Agro/agro-plan-backend/.codex/.gsd-staging/user-artifacts/agroplan-docs/AgroPlan - Flujos de Datos y Modelo de Datos.md",
+  "type": "SPEC",
+  "confidence": "high",
+  "manifest_override": true,
+  "title": "AgroPlan — Flujos de datos y modelo de base de datos",
+  "summary": "Describe los flujos de datos y el modelo conceptual PostgreSQL para Gestión, identidad, sincronización offline, archivos y trabajos asíncronos.",
+  "scope": ["ASP.NET Core", "Supabase PostgreSQL", "Supabase Storage", "CloudAMQP RabbitMQ", "SignalR", "sincronización offline", "identidad", "permisos por finca", "trabajos asíncronos", "bitácora", "outbox"],
+  "cross_refs": ["AgroPlan - Flujos de Datos por Actor y Función.md"],
+  "locked": false,
+  "precedence": 1,
+  "notes": "El tipo SPEC y la precedencia fueron declarados por el manifiesto."
+}

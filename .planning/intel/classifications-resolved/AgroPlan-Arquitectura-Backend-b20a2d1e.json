@@ -1,0 +1,13 @@
+{
+  "source_path": "C:/Users/romer/Lgsus/Proyecto Agro/agro-plan-backend/.codex/.gsd-staging/user-artifacts/agroplan-docs/AgroPlan - Arquitectura Backend.md",
+  "type": "SPEC",
+  "confidence": "high",
+  "manifest_override": true,
+  "title": "AgroPlan — Diagrama de arquitectura del backend (piloto)",
+  "summary": "Defines the pilot backend architecture, service responsibilities, data flows, offline synchronization, deployment, logging, and pending technical decisions.",
+  "scope": ["ASP.NET Core API", ".NET Worker", "Supabase PostgreSQL", "Supabase Storage", "CloudAMQP RabbitMQ", "SignalR", "Identity", "offline synchronization", "outbox", "audit", "AI processing"],
+  "cross_refs": ["AgroPlan - Alcance y Permisos del Piloto.md"],
+  "locked": false,
+  "precedence": 0,
+  "notes": "Manifest explicitly classifies this technical architecture document as SPEC; it is a proposal, not an ADR with Accepted status."
+}
