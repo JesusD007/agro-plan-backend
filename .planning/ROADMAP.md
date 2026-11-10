@@ -71,12 +71,19 @@ Plans:
   3. A worker can record task changes offline and synchronize them later without duplicate effects; concurrent edits are surfaced as conflicts instead of silently overwriting either version.
   4. Confirmed field records update affected tasks and calendars with an explanation, while independent operations continue when unrelated dependencies fail.
 **Plans**: 0/7 plans executed
+**Wave 1**
 - [ ] 03-01-PLAN.md
+
+**Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 03-02-PLAN.md
+
+**Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 03-03-PLAN.md
 - [ ] 03-04-PLAN.md
 - [ ] 03-05-PLAN.md
 - [ ] 03-06-PLAN.md
+
+**Wave 4** *(blocked on Wave 3 completion)*
 - [ ] 03-07-PLAN.md
 
 ### Phase 4: Applied Farm Intelligence
