@@ -21,6 +21,7 @@ public sealed class WorkTaskConfiguration : IEntityTypeConfiguration<WorkTask>
         builder.Property(task => task.WageUnit).HasMaxLength(64);
         builder.Property(task => task.OperationKind).HasMaxLength(64);
         builder.Property(task => task.CreatedAt).IsRequired();
+        builder.Property(task => task.Version).IsConcurrencyToken().IsRequired();
         builder.HasIndex(task => new { task.FarmId, task.AssignedWorkerUserId, task.Status, task.DueDate });
         builder.HasOne<Farm>().WithMany().HasForeignKey(task => task.FarmId).OnDelete(DeleteBehavior.Cascade);
         builder.HasOne<FarmMembership>().WithMany()

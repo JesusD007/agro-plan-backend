@@ -35,6 +35,18 @@ public sealed class WorkSyncTests
     [Fact]
     public void Task_sync_conflict_aggregate_is_available()
     {
-        Assert.NotNull(typeof(WorkTask).Assembly.GetType("AgroPlan.Domain.Workforce.TaskSyncConflict"));
+        var now = DateTimeOffset.UtcNow;
+        var conflict = new TaskSyncConflict(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "worker-1", Guid.NewGuid(),
+            2, "{\"description\":\"client\"}", 3, "{\"description\":\"server\"}", now);
+        var resolution = new TaskSyncConflictResolution(Guid.NewGuid(), conflict.FarmId, conflict.Id, "owner-1",
+            "Client", "{\"description\":\"client\"}", 4, now);
+
+        Assert.Equal(2, conflict.BaseVersion);
+        Assert.Equal(3, conflict.ServerVersion);
+        Assert.Equal("{\"description\":\"client\"}", conflict.ClientValuesJson);
+        Assert.Equal("Client", resolution.Resolution);
+        Assert.Equal(4, resolution.ResultTaskVersion);
+        Assert.Throws<ArgumentOutOfRangeException>(() => new TaskSyncConflict(Guid.NewGuid(), conflict.FarmId,
+            conflict.WorkTaskId, "worker-1", Guid.NewGuid(), 3, "{}", 3, "{}", now));
     }
 }

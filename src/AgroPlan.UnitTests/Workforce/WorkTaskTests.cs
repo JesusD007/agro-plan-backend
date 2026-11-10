@@ -45,6 +45,17 @@ public sealed class WorkTaskTests
     }
 
     [Fact]
+    public void Schedule_changes_advance_the_task_version()
+    {
+        var task = Create();
+        Assert.Equal(1, task.Version);
+        task.Update("Inspect the east rows", DateOnly.FromDateTime(DateTime.UtcNow.AddDays(2)));
+        Assert.Equal(2, task.Version);
+        task.Start();
+        Assert.Equal(3, task.Version);
+    }
+
+    [Fact]
     public void Review_decision_requires_reason_and_verified_wage_is_an_immutable_fact()
     {
         var farmId = Guid.NewGuid();

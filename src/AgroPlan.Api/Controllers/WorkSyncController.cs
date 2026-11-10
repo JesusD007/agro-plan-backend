@@ -20,6 +20,7 @@ namespace AgroPlan.Api.Controllers;
 public sealed class WorkSyncController(AgroPlanDbContext db, AssignedWorkerAuthorizationService authorization,
     TaskEvidenceFinalizationService evidenceFinalization) : ControllerBase
 {
+    private static readonly JsonSerializerOptions WebJson = new(JsonSerializerDefaults.Web);
     [HttpPost]
     public async Task<ActionResult<WorkSyncBatchResponse>> Sync(Guid farmId, WorkSyncBatchRequest request, CancellationToken ct)
     {
@@ -68,7 +69,8 @@ public sealed class WorkSyncController(AgroPlanDbContext db, AssignedWorkerAutho
             if (!CryptographicOperations.FixedTimeEquals(Convert.FromHexString(existing.PayloadFingerprint), Convert.FromHexString(fingerprint)))
                 return new(operation.OperationId, "Conflict", existing.Id, "This operation id was already used with a different payload.", false);
             var result = JsonSerializer.Deserialize<StoredOperationResult>(existing.ResultJson)!;
-            return new(operation.OperationId, "Replayed", existing.Id, result.Message, false, result.TaskVersion, result.SubmissionId);
+            return new(operation.OperationId, "Replayed", existing.Id, result.Message, false, result.TaskVersion,
+                result.SubmissionId, result.ConflictId);
         }
 
         var workerIsActive = await db.FarmMemberships.AnyAsync(member => member.FarmId == farmId &&
@@ -87,6 +89,30 @@ public sealed class WorkSyncController(AgroPlanDbContext db, AssignedWorkerAutho
             return new(operation.OperationId, "Rejected", null, "The task is not assigned to this worker.", false);
         }
 
+        if (operation.BaseVersion != task.Version && operation.Kind.Trim().ToLowerInvariant() is "task.start" or "task.update")
+        {
+            if (operation.BaseVersion > task.Version)
+            {
+                await transaction.RollbackAsync(ct);
+                return new(operation.OperationId, "Rejected", null, "The supplied task version is newer than the server version.", false, task.Version);
+            }
+            var conflictId = Guid.NewGuid();
+            var clientValues = operation.Payload.ValueKind == JsonValueKind.Undefined ? "{}" : CanonicalJson(operation.Payload);
+            var serverValues = JsonSerializer.Serialize(new { task.Version, task.DueDate, task.Description, Status = task.Status.ToString() });
+            var conflict = new TaskSyncConflict(conflictId, farmId, task.Id, workerId, operation.OperationId,
+                operation.BaseVersion, clientValues, task.Version, serverValues, DateTimeOffset.UtcNow);
+            var conflictResponse = new StoredOperationResult("Task version conflict requires farm administrator resolution.",
+                task.Version, null, conflictId);
+            var conflictReceipt = new SyncOperationReceipt(Guid.NewGuid(), farmId, workerId, operation.OperationId,
+                fingerprint, "Conflict", JsonSerializer.Serialize(conflictResponse), DateTimeOffset.UtcNow);
+            db.TaskSyncConflicts.Add(conflict);
+            db.SyncOperationReceipts.Add(conflictReceipt);
+            await db.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
+            return new(operation.OperationId, "Conflict", conflictReceipt.Id, conflictResponse.Message, false,
+                task.Version, null, conflictId);
+        }
+
         Guid? submissionId = null;
         string message;
         switch (operation.Kind.Trim().ToLowerInvariant())
@@ -99,6 +125,21 @@ public sealed class WorkSyncController(AgroPlanDbContext db, AssignedWorkerAutho
                 }
                 task.Start();
                 message = "Task started.";
+                break;
+            case "task.update":
+                var values = operation.Payload.Deserialize<TaskUpdateValues>(WebJson);
+                if (values is null)
+                {
+                    await transaction.RollbackAsync(ct);
+                    return new(operation.OperationId, "Rejected", null, "Task update values are required.", false, task.Version);
+                }
+                try { task.Update(values.Description, values.DueDate); }
+                catch (ArgumentException exception)
+                {
+                    await transaction.RollbackAsync(ct);
+                    return new(operation.OperationId, "Rejected", null, exception.Message, false, task.Version);
+                }
+                message = "Task updated.";
                 break;
             case "evidence.finalize":
                 if (!operation.SubmissionId.HasValue || operation.SubmissionId == Guid.Empty)
@@ -121,12 +162,69 @@ public sealed class WorkSyncController(AgroPlanDbContext db, AssignedWorkerAutho
         }
 
         var receipt = new SyncOperationReceipt(Guid.NewGuid(), farmId, workerId, operation.OperationId,
-            fingerprint, "Applied", JsonSerializer.Serialize(new StoredOperationResult(message, 1, submissionId)),
+            fingerprint, "Applied", JsonSerializer.Serialize(new StoredOperationResult(message, task.Version, submissionId, null)),
             DateTimeOffset.UtcNow);
         db.SyncOperationReceipts.Add(receipt);
         await db.SaveChangesAsync(ct);
         await transaction.CommitAsync(ct);
-        return new(operation.OperationId, "Applied", receipt.Id, message, false, 1, submissionId);
+        return new(operation.OperationId, "Applied", receipt.Id, message, false, task.Version, submissionId);
+    }
+
+    [HttpPost("conflicts/{conflictId:guid}/resolve")]
+    public async Task<IActionResult> Resolve(Guid farmId, Guid conflictId, ResolveTaskSyncConflictRequest request, CancellationToken ct)
+    {
+        var actorId = CurrentUserId();
+        if (actorId is null) return Unauthorized();
+        var role = await authorization.GetActiveRoleAsync(farmId, actorId, ct);
+        if (role is not (FarmRole.Owner or FarmRole.Administrator)) return Forbid();
+        if (!ModelState.IsValid || request.Resolution is not ("server" or "client" or "edited"))
+            return BadRequest(new { message = "Resolution must be server, client, or edited." });
+
+        await using var transaction = await db.Database.BeginTransactionAsync(ct);
+        var conflict = await db.TaskSyncConflicts.SingleOrDefaultAsync(item => item.FarmId == farmId && item.Id == conflictId, ct);
+        if (conflict is null) return NotFound();
+        var priorResolution = await db.TaskSyncConflictResolutions.SingleOrDefaultAsync(item => item.FarmId == farmId &&
+            item.ConflictId == conflictId, ct);
+        if (priorResolution is not null)
+        {
+            await transaction.CommitAsync(ct);
+            return Conflict(new { message = "This conflict already has an immutable resolution.", priorResolution.Id });
+        }
+        await db.Database.ExecuteSqlInterpolatedAsync($"SELECT \"Id\" FROM agro.work_tasks WHERE \"FarmId\" = {farmId} AND \"Id\" = {conflict.WorkTaskId} FOR UPDATE", ct);
+        var task = await db.WorkTasks.SingleOrDefaultAsync(item => item.FarmId == farmId && item.Id == conflict.WorkTaskId, ct);
+        if (task is null) return NotFound();
+        if (task.Version != conflict.ServerVersion)
+        {
+            await transaction.RollbackAsync(ct);
+            return Conflict(new { message = "The task changed after this conflict was recorded; a new synchronization is required.", currentVersion = task.Version });
+        }
+
+        var resolutionKind = request.Resolution switch { "server" => "Server", "client" => "Client", _ => "Edited" };
+        TaskUpdateValues? selected = null;
+        if (resolutionKind == "Client") selected = JsonSerializer.Deserialize<TaskUpdateValues>(conflict.ClientValuesJson, WebJson);
+        else if (resolutionKind == "Edited") selected = request.Values;
+        if (resolutionKind is "Client" or "Edited")
+        {
+            if (selected is null)
+            {
+                await transaction.RollbackAsync(ct);
+                return BadRequest(new { message = "Selected task values are required for this resolution." });
+            }
+            try { task.Update(selected.Description, selected.DueDate); }
+            catch (ArgumentException exception)
+            {
+                await transaction.RollbackAsync(ct);
+                return BadRequest(new { message = exception.Message });
+            }
+        }
+        var selectedJson = JsonSerializer.Serialize(new { task.Version, task.DueDate, task.Description, Status = task.Status.ToString() });
+        var resolution = new TaskSyncConflictResolution(Guid.NewGuid(), farmId, conflictId, actorId,
+            resolutionKind, selectedJson, task.Version, DateTimeOffset.UtcNow);
+        db.TaskSyncConflictResolutions.Add(resolution);
+        await db.SaveChangesAsync(ct);
+        await transaction.CommitAsync(ct);
+        return Ok(new { conflictId, resolutionId = resolution.Id, resolution = resolution.Resolution,
+            taskVersion = task.Version, task.Description, task.DueDate });
     }
 
     private static string Fingerprint(WorkSyncOperationRequest operation)
@@ -173,12 +271,14 @@ public sealed class WorkSyncController(AgroPlanDbContext db, AssignedWorkerAutho
 
     private string? CurrentUserId() => User.FindFirstValue("sub") ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-    private sealed record StoredOperationResult(string Message, int TaskVersion, Guid? SubmissionId);
+    private sealed record StoredOperationResult(string Message, int TaskVersion, Guid? SubmissionId, Guid? ConflictId = null);
 }
 
 public sealed record WorkSyncBatchRequest([Required, MinLength(1), MaxLength(100)] IReadOnlyList<WorkSyncOperationRequest> Operations);
 public sealed record WorkSyncOperationRequest(Guid OperationId, Guid TaskId, [Required, StringLength(48)] string Kind,
     [Range(1, int.MaxValue)] int BaseVersion, JsonElement Payload, Guid? SubmissionId = null);
 public sealed record WorkSyncBatchResponse(IReadOnlyList<WorkSyncOperationResponse> Operations);
+public sealed record TaskUpdateValues([Required, StringLength(1000)] string Description, DateOnly DueDate);
 public sealed record WorkSyncOperationResponse(Guid OperationId, string Status, Guid? ReceiptId, string Message,
-    bool Retryable, int? TaskVersion = null, Guid? SubmissionId = null);
+    bool Retryable, int? TaskVersion = null, Guid? SubmissionId = null, Guid? ConflictId = null);
+public sealed record ResolveTaskSyncConflictRequest([Required, StringLength(16)] string Resolution, TaskUpdateValues? Values = null);

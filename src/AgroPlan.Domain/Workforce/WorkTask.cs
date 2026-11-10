@@ -63,11 +63,13 @@ public sealed class WorkTask
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset? SubmittedAt { get; private set; }
     public DateTimeOffset? VerifiedAt { get; private set; }
+    public int Version { get; private set; } = 1;
 
     public void Start()
     {
         RequireStatus(WorkTaskStatus.Pending);
         Status = WorkTaskStatus.InProgress;
+        Version++;
     }
 
     public void Reassign(string workerUserId)
@@ -76,6 +78,18 @@ public sealed class WorkTask
         if (string.IsNullOrWhiteSpace(workerUserId) || workerUserId.Length > 450)
             throw new ArgumentException("An assigned worker is required.", nameof(workerUserId));
         AssignedWorkerUserId = workerUserId.Trim();
+        Version++;
+    }
+
+    public void Update(string description, DateOnly dueDate)
+    {
+        RequireStatus(WorkTaskStatus.Pending);
+        if (string.IsNullOrWhiteSpace(description) || description.Trim().Length > 1000)
+            throw new ArgumentException("Task description is required and must not exceed 1000 characters.", nameof(description));
+        if (dueDate == default) throw new ArgumentException("A due date is required.", nameof(dueDate));
+        Description = description.Trim();
+        DueDate = dueDate;
+        Version++;
     }
 
     public void Submit(DateTimeOffset submittedAt)
@@ -85,6 +99,7 @@ public sealed class WorkTask
             throw new InvalidOperationException("Only in-progress or correction-requested work can be submitted.");
         Status = WorkTaskStatus.Submitted;
         SubmittedAt = submittedAt;
+        Version++;
     }
 
     public void Verify(DateTimeOffset verifiedAt)
@@ -93,18 +108,21 @@ public sealed class WorkTask
         if (verifiedAt == default) throw new ArgumentException("Verification time is required.", nameof(verifiedAt));
         Status = WorkTaskStatus.Verified;
         VerifiedAt = verifiedAt;
+        Version++;
     }
 
     public void Reject()
     {
         RequireStatus(WorkTaskStatus.Submitted);
         Status = WorkTaskStatus.Rejected;
+        Version++;
     }
 
     public void RequestCorrection()
     {
         RequireStatus(WorkTaskStatus.Submitted);
         Status = WorkTaskStatus.CorrectionRequested;
+        Version++;
     }
 
     private void RequireStatus(WorkTaskStatus expected)

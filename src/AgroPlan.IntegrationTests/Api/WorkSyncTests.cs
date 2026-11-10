@@ -151,7 +151,8 @@ public sealed class WorkSyncTests(PostgreSqlFixture database) : IAsyncLifetime
         });
         Assert.Equal(HttpStatusCode.OK, current.StatusCode);
         var currentResult = await current.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
-        Assert.Equal("Applied", currentResult.GetProperty("operations")[0].GetProperty("status").GetString());
+        Assert.True(currentResult.GetProperty("operations")[0].GetProperty("status").GetString() == "Applied",
+            currentResult.GetProperty("operations")[0].GetProperty("message").GetString());
         Assert.Equal(2, currentResult.GetProperty("operations")[0].GetProperty("taskVersion").GetInt32());
 
         var conflictOperationId = Guid.NewGuid();
@@ -179,6 +180,55 @@ public sealed class WorkSyncTests(PostgreSqlFixture database) : IAsyncLifetime
         Assert.Equal(HttpStatusCode.OK, resolved.StatusCode);
         await using var verifyDb = database.CreateDbContext();
         Assert.Equal("Client version", (await verifyDb.WorkTasks.SingleAsync(task => task.Id == _taskId)).Description);
+        var storedConflict = await verifyDb.TaskSyncConflicts.SingleAsync(conflict => conflict.Id == conflictId);
+        Assert.Equal(1, storedConflict.BaseVersion);
+        Assert.Equal(2, storedConflict.ServerVersion);
+        Assert.Contains("Client version", storedConflict.ClientValuesJson);
+        Assert.Contains("Server version", storedConflict.ServerValuesJson);
+        var resolution = await verifyDb.TaskSyncConflictResolutions.SingleAsync(item => item.ConflictId == conflictId);
+        Assert.Equal(_ownerId, resolution.DecidedByUserId);
+        Assert.Equal("Client", resolution.Resolution);
+        Assert.Equal(3, resolution.ResultTaskVersion);
+    }
+
+    [Fact]
+    public async Task Conflict_resolution_is_rejected_if_the_task_changed_after_conflict_capture()
+    {
+        database.EnsureAvailable();
+        TestData.SetBearer(_client, _workerId);
+        await _client.PostAsJsonAsync($"/api/farms/{_farmId}/work-sync", new
+        {
+            operations = new[]
+            {
+                new { operationId = Guid.NewGuid(), taskId = _taskId, kind = "task.update", baseVersion = 1,
+                    payload = new { description = "First server change", dueDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(2)) } }
+            }
+        });
+        var stale = await _client.PostAsJsonAsync($"/api/farms/{_farmId}/work-sync", new
+        {
+            operations = new[]
+            {
+                new { operationId = Guid.NewGuid(), taskId = _taskId, kind = "task.update", baseVersion = 1,
+                    payload = new { description = "Offline attempt", dueDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(3)) } }
+            }
+        });
+        var staleResult = await stale.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+        var conflictId = staleResult.GetProperty("operations")[0].GetProperty("conflictId").GetGuid();
+
+        await using (var db = database.CreateDbContext())
+        {
+            var task = await db.WorkTasks.SingleAsync(item => item.Id == _taskId);
+            task.Update("Later server change", DateOnly.FromDateTime(DateTime.UtcNow.AddDays(4)));
+            await db.SaveChangesAsync();
+        }
+
+        TestData.SetBearer(_client, _ownerId);
+        var resolution = await _client.PostAsJsonAsync($"/api/farms/{_farmId}/work-sync/conflicts/{conflictId}/resolve",
+            new { resolution = "client" });
+        Assert.Equal(HttpStatusCode.Conflict, resolution.StatusCode);
+        await using var verifyDb = database.CreateDbContext();
+        Assert.Equal("Later server change", (await verifyDb.WorkTasks.SingleAsync(item => item.Id == _taskId)).Description);
+        Assert.Empty(await verifyDb.TaskSyncConflictResolutions.Where(item => item.ConflictId == conflictId).ToArrayAsync());
     }
 
     private static ApplicationUser User(string id) => new()
