@@ -21,6 +21,16 @@ public sealed class InputApplicationEntryTests
     }
 
     [Fact]
+    public void Cited_label_identity_is_retained_only_as_unvalidated_evidence_metadata()
+    {
+        var entry = new InputApplicationEntry(Guid.NewGuid(), Farm, Parcel, null, "REG-42", "FORM-EC",
+            "rice", "fungicide-use", Now, InputApplicationMethod.Drone, 2.5m, "L/ha", "producer", Now,
+            citedLabelSource: "producer-cited-register", citedLabelVersion: "v2");
+        Assert.Equal("producer-cited-register", entry.CitedLabelSource);
+        Assert.Equal("v2", entry.CitedLabelVersion);
+    }
+
+    [Fact]
     public void Missing_or_unvalidated_rule_returns_unavailable_with_reason()
     {
         var entry = Create();

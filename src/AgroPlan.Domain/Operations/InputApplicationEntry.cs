@@ -11,7 +11,8 @@ public sealed class InputApplicationEntry
     public InputApplicationEntry(Guid id, Guid farmId, Guid parcelId, Guid? cropCycleId,
         string productRegistrationId, string formulationId, string cropId, string intendedUseId,
         DateTimeOffset appliedAt, InputApplicationMethod method, decimal quantity, string unit,
-        string actorUserId, DateTimeOffset createdAt, Guid? correctsEntryId = null, string? correctionReason = null)
+        string actorUserId, DateTimeOffset createdAt, Guid? correctsEntryId = null, string? correctionReason = null,
+        string? citedLabelSource = null, string? citedLabelVersion = null)
     {
         if (id == Guid.Empty || farmId == Guid.Empty || parcelId == Guid.Empty)
             throw new ArgumentException("Entry, farm and parcel ids are required.");
@@ -26,11 +27,15 @@ public sealed class InputApplicationEntry
         if (string.IsNullOrWhiteSpace(actorUserId)) throw new ArgumentException("Actor is required.", nameof(actorUserId));
         if (correctsEntryId.HasValue && string.IsNullOrWhiteSpace(correctionReason))
             throw new ArgumentException("A correction reason is required.", nameof(correctionReason));
+        if (citedLabelSource?.Trim().Length > 500 || citedLabelVersion?.Trim().Length > 200)
+            throw new ArgumentException("Cited label source/version exceeds its maximum length.");
         Id = id; FarmId = farmId; ParcelId = parcelId; CropCycleId = cropCycleId;
         ProductRegistrationId = productRegistrationId.Trim(); FormulationId = formulationId.Trim();
         CropId = cropId.Trim(); IntendedUseId = intendedUseId.Trim(); AppliedAt = appliedAt; Method = method;
         Quantity = quantity; Unit = unit.Trim(); ActorUserId = actorUserId; CreatedAt = createdAt;
         CorrectsEntryId = correctsEntryId; CorrectionReason = string.IsNullOrWhiteSpace(correctionReason) ? null : correctionReason.Trim();
+        CitedLabelSource = string.IsNullOrWhiteSpace(citedLabelSource) ? null : citedLabelSource.Trim();
+        CitedLabelVersion = string.IsNullOrWhiteSpace(citedLabelVersion) ? null : citedLabelVersion.Trim();
     }
 
     public Guid Id { get; private set; }
@@ -49,6 +54,8 @@ public sealed class InputApplicationEntry
     public DateTimeOffset CreatedAt { get; private set; }
     public Guid? CorrectsEntryId { get; private set; }
     public string? CorrectionReason { get; private set; }
+    public string? CitedLabelSource { get; private set; }
+    public string? CitedLabelVersion { get; private set; }
 }
 
 /// <summary>Validated, versioned rule; only exact and currently effective matches may drive frequency status.</summary>

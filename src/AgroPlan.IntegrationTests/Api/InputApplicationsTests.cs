@@ -28,12 +28,15 @@ public sealed class InputApplicationsTests(PostgreSqlFixture postgres)
         {
             parcelId, productRegistrationId = "REG-42", formulationId = "FORM-EC", cropId = "rice",
             intendedUseId = "fungicide-use", appliedAt, method = InputApplicationMethod.Drone,
-            quantity = 2.5m, unit = "L/ha", phiDays = 0
+            quantity = 2.5m, unit = "L/ha", citedLabelSource = "producer-cited-register", citedLabelVersion = "v2", phiDays = 0
         }, TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.Created, append.StatusCode);
         using var json = JsonDocument.Parse(await append.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
         Assert.Equal("unavailable", json.RootElement.GetProperty("frequencyStatus").GetString());
         Assert.NotNull(json.RootElement.GetProperty("frequencyMissingEvidenceReason").GetString());
+        Assert.Equal("producer-cited-register", json.RootElement.GetProperty("citedLabelSource").GetString());
+        Assert.Equal("v2", json.RootElement.GetProperty("citedLabelVersion").GetString());
+        Assert.Equal("unverified", json.RootElement.GetProperty("labelEvidenceStatus").GetString());
         Assert.False(json.RootElement.TryGetProperty("phiDays", out _));
         var originalId = json.RootElement.GetProperty("id").GetGuid();
         using var correction = await client.PostAsJsonAsync($"/api/farms/{farmId}/input-applications/{originalId}/corrections", new

@@ -12,7 +12,7 @@ public sealed class InputApplications : Migration
         "CREATE TABLE agro.input_application_entries (\"Id\" uuid NOT NULL PRIMARY KEY, \"FarmId\" uuid NOT NULL, \"ParcelId\" uuid NOT NULL, \"CropCycleId\" uuid, " +
         "\"ProductRegistrationId\" varchar(120) NOT NULL, \"FormulationId\" varchar(120) NOT NULL, \"CropId\" varchar(120) NOT NULL, \"IntendedUseId\" varchar(120) NOT NULL, " +
         "\"AppliedAt\" timestamptz NOT NULL, \"Method\" varchar(16) NOT NULL, \"Quantity\" numeric(18,4) NOT NULL, \"Unit\" varchar(64) NOT NULL, " +
-        "\"ActorUserId\" varchar(450) NOT NULL, \"CreatedAt\" timestamptz NOT NULL, \"CorrectsEntryId\" uuid, \"CorrectionReason\" varchar(1000), UNIQUE (\"FarmId\", \"Id\"), " +
+        "\"ActorUserId\" varchar(450) NOT NULL, \"CreatedAt\" timestamptz NOT NULL, \"CorrectsEntryId\" uuid, \"CorrectionReason\" varchar(1000), \"CitedLabelSource\" varchar(500), \"CitedLabelVersion\" varchar(200), UNIQUE (\"FarmId\", \"Id\"), " +
         "FOREIGN KEY (\"FarmId\", \"ParcelId\") REFERENCES agro.parcels (\"FarmId\", \"Id\") ON DELETE RESTRICT, " +
         "FOREIGN KEY (\"FarmId\", \"CropCycleId\") REFERENCES agro.crop_cycles (\"FarmId\", \"Id\") ON DELETE RESTRICT, " +
         "FOREIGN KEY (\"FarmId\", \"CorrectsEntryId\") REFERENCES agro.input_application_entries (\"FarmId\", \"Id\") ON DELETE RESTRICT); " +

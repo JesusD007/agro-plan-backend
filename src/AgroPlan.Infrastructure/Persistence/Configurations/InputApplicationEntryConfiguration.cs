@@ -22,6 +22,8 @@ public sealed class InputApplicationEntryConfiguration : IEntityTypeConfiguratio
         builder.Property(x => x.Unit).HasMaxLength(64).IsRequired();
         builder.Property(x => x.ActorUserId).HasMaxLength(450).IsRequired();
         builder.Property(x => x.CorrectionReason).HasMaxLength(1000);
+        builder.Property(x => x.CitedLabelSource).HasMaxLength(500);
+        builder.Property(x => x.CitedLabelVersion).HasMaxLength(200);
         builder.HasIndex(x => new { x.FarmId, x.AppliedAt });
         builder.HasIndex(x => new { x.FarmId, x.ProductRegistrationId, x.FormulationId, x.CropId, x.IntendedUseId, x.AppliedAt });
         builder.HasOne<Parcel>().WithMany().HasForeignKey(x => new { x.FarmId, x.ParcelId })
