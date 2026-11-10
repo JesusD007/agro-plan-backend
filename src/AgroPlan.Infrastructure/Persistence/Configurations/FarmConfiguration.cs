@@ -14,6 +14,7 @@ public sealed class FarmConfiguration : IEntityTypeConfiguration<Farm>
         builder.Property(farm => farm.Name).HasMaxLength(160).IsRequired();
         builder.Property(farm => farm.Location).HasMaxLength(240);
         builder.Property(farm => farm.CreatedAt).IsRequired();
+        builder.Property(farm => farm.WorkerEntitlement).HasConversion<string>().HasMaxLength(24).IsRequired();
         builder.HasIndex(farm => farm.CreatedAt);
 
         builder.HasMany(farm => farm.Memberships)

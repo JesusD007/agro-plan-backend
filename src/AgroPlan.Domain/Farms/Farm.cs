@@ -19,6 +19,7 @@ public sealed class Farm
     public string Name { get; private set; } = string.Empty;
     public string? Location { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
+    public WorkerEntitlement WorkerEntitlement { get; private set; } = WorkerEntitlement.Basic;
     public ICollection<FarmMembership> Memberships { get; private set; } = new List<FarmMembership>();
     public ICollection<Parcel> Parcels { get; private set; } = new List<Parcel>();
 
@@ -28,12 +29,21 @@ public sealed class Farm
         Name = name.Trim();
         Location = string.IsNullOrWhiteSpace(location) ? null : location.Trim();
     }
+
+    public void ProvisionWorkerEntitlement(WorkerEntitlement entitlement) => WorkerEntitlement = entitlement;
+}
+
+public enum WorkerEntitlement
+{
+    Basic = 1,
+    Premium = 2
 }
 
 public enum FarmRole
 {
     Owner = 1,
-    Administrator = 2
+    Administrator = 2,
+    Worker = 3
 }
 
 public sealed class FarmMembership

@@ -91,6 +91,7 @@ internal sealed class ApiTestFactory : WebApplicationFactory<AgroApi::Program>
                 ["Jwt:SigningKey"] = TestSettings.SigningKey,
                 ["Recovery:CodeLifetimeMinutes"] = "15",
                 ["Recovery:PasswordChangeTokenLifetimeMinutes"] = "15",
+                ["WorkerInvitations:AcceptanceUrl"] = "https://client.example.test/accept-worker-invitation",
                 ["RABBITMQ_URL"] = _rabbitMqUrl
             }));
 
