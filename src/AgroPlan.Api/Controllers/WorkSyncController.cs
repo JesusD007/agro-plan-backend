@@ -181,6 +181,7 @@ public sealed class WorkSyncController(AgroPlanDbContext db, AssignedWorkerAutho
             return BadRequest(new { message = "Resolution must be server, client, or edited." });
 
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
+        await db.Database.ExecuteSqlInterpolatedAsync($"SELECT \"Id\" FROM agro.task_sync_conflicts WHERE \"FarmId\" = {farmId} AND \"Id\" = {conflictId} FOR UPDATE", ct);
         var conflict = await db.TaskSyncConflicts.SingleOrDefaultAsync(item => item.FarmId == farmId && item.Id == conflictId, ct);
         if (conflict is null) return NotFound();
         var priorResolution = await db.TaskSyncConflictResolutions.SingleOrDefaultAsync(item => item.FarmId == farmId &&
