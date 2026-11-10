@@ -14,6 +14,7 @@ public sealed class OpenApiDocumentationTests
     {
         await using var factory = new ApiTestFactory(UnusedConnectionString, disableBackgroundServices: true);
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        client.Timeout = TimeSpan.FromSeconds(10);
 
         using var documentResponse = await client.GetAsync("/openapi/v1.json");
         Assert.Equal(HttpStatusCode.OK, documentResponse.StatusCode);
@@ -35,6 +36,7 @@ public sealed class OpenApiDocumentationTests
     {
         await using var factory = new ApiTestFactory(UnusedConnectionString, "Production", disableBackgroundServices: true);
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        client.Timeout = TimeSpan.FromSeconds(10);
 
         using var scalarResponse = await client.GetAsync("/scalar");
         using var documentResponse = await client.GetAsync("/openapi/v1.json");

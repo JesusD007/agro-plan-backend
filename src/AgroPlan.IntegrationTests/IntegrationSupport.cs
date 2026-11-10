@@ -64,7 +64,15 @@ internal sealed class ApiTestFactory(
         builder.ConfigureTestServices(services =>
         {
             if (disableBackgroundServices)
-                services.RemoveAll<IHostedService>();
+            {
+                var backgroundServices = services.Where(descriptor =>
+                    descriptor.ServiceType == typeof(IHostedService) &&
+                    descriptor.ImplementationType is { } implementationType &&
+                    (implementationType == typeof(AgroPlan.Api.Services.JobStatusNotificationService) ||
+                     implementationType == typeof(AgroPlan.Infrastructure.Messaging.OutboxPublisher))).ToArray();
+                foreach (var descriptor in backgroundServices)
+                    services.Remove(descriptor);
+            }
             services.RemoveAll<IEmailSender>();
             services.AddSingleton<IEmailSender>(Email);
             services.RemoveAll<IFileStorage>();
