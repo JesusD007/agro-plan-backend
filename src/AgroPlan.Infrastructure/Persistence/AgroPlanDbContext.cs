@@ -53,6 +53,7 @@ public sealed class AgroPlanDbContext(DbContextOptions<AgroPlanDbContext> option
     public DbSet<TaskSyncConflictResolution> TaskSyncConflictResolutions => Set<TaskSyncConflictResolution>();
     public DbSet<FarmWorkerSettings> FarmWorkerSettings => Set<FarmWorkerSettings>();
     public DbSet<VerifiedWorkReward> VerifiedWorkRewards => Set<VerifiedWorkReward>();
+    public DbSet<WorkRoute> WorkRoutes => Set<WorkRoute>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

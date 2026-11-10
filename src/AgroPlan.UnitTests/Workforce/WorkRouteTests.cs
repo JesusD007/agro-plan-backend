@@ -55,4 +55,35 @@ public sealed class WorkRouteTests
 
         Assert.NotNull(domainAssembly.GetType("AgroPlan.Domain.Workforce.WorkRoute"));
     }
+
+    [Fact]
+    public void Route_requires_administrator_confirmation_and_becomes_stale_immutably()
+    {
+        var taskId = Guid.NewGuid();
+        var route = new WorkRoute(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "worker-1", 1,
+            [taskId], [new WorkRouteTaskSource(taskId, 1, null, null)], null, DateTimeOffset.UtcNow);
+        var confirmedAt = DateTimeOffset.UtcNow;
+
+        Assert.Equal(WorkRouteStatus.Proposed, route.Status);
+        route.Confirm("admin-1", confirmedAt);
+        Assert.Equal(WorkRouteStatus.Confirmed, route.Status);
+        Assert.Equal("admin-1", route.ConfirmedByUserId);
+        Assert.Equal(confirmedAt, route.ConfirmedAt);
+        Assert.True(route.MarkStale(confirmedAt.AddMinutes(1)));
+        Assert.False(route.MarkStale(confirmedAt.AddMinutes(2)));
+        Assert.Equal(WorkRouteStatus.Stale, route.Status);
+        Assert.Equal([taskId], route.GetOrderedTaskIds());
+    }
+
+    [Theory]
+    [InlineData("{\"type\":\"LineString\",\"coordinates\":[[181,10],[1,2]]}")]
+    [InlineData("{\"type\":\"LineString\",\"coordinates\":[[1,2]]}")]
+    [InlineData("not-geojson")]
+    public void Route_rejects_invalid_or_out_of_bounds_provider_geometry(string geometry)
+    {
+        var taskId = Guid.NewGuid();
+
+        Assert.Throws<ArgumentException>(() => new WorkRoute(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "worker-1", 1,
+            [taskId], [new WorkRouteTaskSource(taskId, 1, null, null)], geometry, DateTimeOffset.UtcNow));
+    }
 }
