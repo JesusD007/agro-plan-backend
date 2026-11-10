@@ -9,6 +9,7 @@ using AgroPlan.Application.Crops;
 using AgroPlan.Application.Abstractions;
 using AgroPlan.Infrastructure.Email;
 using AgroPlan.Infrastructure.Messaging;
+using AgroPlan.Infrastructure.Storage;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
@@ -105,6 +106,7 @@ builder.Services.AddScoped<SubmitSowingPlan>();
 builder.Services.AddScoped<SubmitPlantingFrameProposal>();
 builder.Services.AddScoped<AgroPlan.Application.Planning.PlantingFrameCalculator>();
 builder.Services.AddScoped<ConfirmProposal>();
+builder.Services.AddSingleton<IFileStorage, SupabaseFileStorage>();
 builder.Services.AddRateLimiter(options =>
 {
     options.AddPolicy("identity", httpContext => RateLimitPartition.GetFixedWindowLimiter(
