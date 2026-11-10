@@ -51,6 +51,8 @@ public sealed class AgroPlanDbContext(DbContextOptions<AgroPlanDbContext> option
     public DbSet<SyncOperationReceipt> SyncOperationReceipts => Set<SyncOperationReceipt>();
     public DbSet<TaskSyncConflict> TaskSyncConflicts => Set<TaskSyncConflict>();
     public DbSet<TaskSyncConflictResolution> TaskSyncConflictResolutions => Set<TaskSyncConflictResolution>();
+    public DbSet<FarmWorkerSettings> FarmWorkerSettings => Set<FarmWorkerSettings>();
+    public DbSet<VerifiedWorkReward> VerifiedWorkRewards => Set<VerifiedWorkReward>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

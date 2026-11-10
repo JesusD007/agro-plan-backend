@@ -67,7 +67,8 @@ public sealed class WorkTasksController(AgroPlanDbContext db, AssignedWorkerAuth
         {
             task = new WorkTask(Guid.NewGuid(), farmId, request.AssignedWorkerUserId, request.DueDate,
                 request.Description, request.PhotoRequired, request.WageAmount, request.WageUnit,
-                request.ParcelId, request.CropCycleId, request.OperationKind);
+                request.ParcelId, request.CropCycleId, request.OperationKind,
+                request.PointsForVerification, request.CompleteEvidenceBonusPoints);
         }
         catch (ArgumentException exception)
         {
@@ -120,7 +121,7 @@ public sealed class WorkTasksController(AgroPlanDbContext db, AssignedWorkerAuth
 
     private static WorkTaskResponse ToResponse(WorkTask task) => new(task.Id, task.FarmId, task.AssignedWorkerUserId,
         task.DueDate, task.Description, task.Status.ToString(), task.PhotoRequired, task.WageAmount, task.WageUnit,
-        task.ParcelId, task.CropCycleId, task.OperationKind);
+        task.ParcelId, task.CropCycleId, task.OperationKind, task.PointsForVerification, task.CompleteEvidenceBonusPoints);
 }
 
 public sealed record CreateWorkTaskRequest(
@@ -132,10 +133,12 @@ public sealed record CreateWorkTaskRequest(
     [StringLength(64)] string? WageUnit,
     Guid? ParcelId,
     Guid? CropCycleId,
-    [StringLength(64)] string? OperationKind);
+    [StringLength(64)] string? OperationKind,
+    [Range(0, 10000)] int PointsForVerification = 10,
+    [Range(0, 10000)] int CompleteEvidenceBonusPoints = 0);
 
 public sealed record ReassignWorkTaskRequest([Required, StringLength(450)] string AssignedWorkerUserId);
 
 public sealed record WorkTaskResponse(Guid Id, Guid FarmId, string AssignedWorkerUserId, DateOnly DueDate,
     string Description, string Status, bool PhotoRequired, decimal? WageAmount, string? WageUnit,
-    Guid? ParcelId, Guid? CropCycleId, string? OperationKind);
+    Guid? ParcelId, Guid? CropCycleId, string? OperationKind, int PointsForVerification, int CompleteEvidenceBonusPoints);

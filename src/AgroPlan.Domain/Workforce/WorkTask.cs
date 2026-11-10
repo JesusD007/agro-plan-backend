@@ -17,7 +17,8 @@ public sealed class WorkTask
 
     public WorkTask(Guid id, Guid farmId, string assignedWorkerUserId, DateOnly dueDate,
         string description, bool photoRequired, decimal? wageAmount, string? wageUnit,
-        Guid? parcelId, Guid? cropCycleId, string? operationKind = null)
+        Guid? parcelId, Guid? cropCycleId, string? operationKind = null,
+        int pointsForVerification = 10, int completeEvidenceBonusPoints = 0)
     {
         if (id == Guid.Empty || farmId == Guid.Empty) throw new ArgumentException("Task and farm ids are required.");
         if (string.IsNullOrWhiteSpace(assignedWorkerUserId) || assignedWorkerUserId.Length > 450)
@@ -32,6 +33,8 @@ public sealed class WorkTask
         if (parcelId.HasValue != cropCycleId.HasValue || parcelId.HasValue != !string.IsNullOrWhiteSpace(operationKind))
             throw new ArgumentException("Confirmed-record impacts require parcel, crop cycle, and operation kind together.");
         if (operationKind?.Trim().Length > 64) throw new ArgumentException("Operation kind must not exceed 64 characters.", nameof(operationKind));
+        if (pointsForVerification is < 0 or > 10000) throw new ArgumentOutOfRangeException(nameof(pointsForVerification));
+        if (completeEvidenceBonusPoints is < 0 or > 10000) throw new ArgumentOutOfRangeException(nameof(completeEvidenceBonusPoints));
 
         Id = id;
         FarmId = farmId;
@@ -44,6 +47,8 @@ public sealed class WorkTask
         ParcelId = parcelId;
         CropCycleId = cropCycleId;
         OperationKind = operationKind?.Trim().ToLowerInvariant();
+        PointsForVerification = pointsForVerification;
+        CompleteEvidenceBonusPoints = completeEvidenceBonusPoints;
         Status = WorkTaskStatus.Pending;
         CreatedAt = DateTimeOffset.UtcNow;
     }
@@ -60,6 +65,8 @@ public sealed class WorkTask
     public Guid? ParcelId { get; private set; }
     public Guid? CropCycleId { get; private set; }
     public string? OperationKind { get; private set; }
+    public int PointsForVerification { get; private set; }
+    public int CompleteEvidenceBonusPoints { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset? SubmittedAt { get; private set; }
     public DateTimeOffset? VerifiedAt { get; private set; }

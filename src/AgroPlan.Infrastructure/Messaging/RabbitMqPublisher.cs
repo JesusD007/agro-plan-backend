@@ -9,6 +9,7 @@ public sealed class RabbitMqPublisher(RabbitMqConnection connection)
     public const string QueueName = "agroplan.sowing-plans.v1";
     public const string PlantingFramesQueueName = "agroplan.planting-frames.v1";
     public const string ScheduleChangesQueueName = "agroplan.schedule-changes.v1";
+    public const string VerifiedWorkQueueName = "agroplan.verified-work.v1";
 
     public async Task PublishAsync(OutboxMessage message, CancellationToken cancellationToken)
     {
@@ -21,6 +22,7 @@ public sealed class RabbitMqPublisher(RabbitMqConnection connection)
         {
             "planting-frame.requested" => PlantingFramesQueueName,
             "schedule-change.requested" => ScheduleChangesQueueName,
+            "work-task.verified" => VerifiedWorkQueueName,
             _ => QueueName
         };
         await channel.QueueDeclareAsync(queueName, durable: true, exclusive: false, autoDelete: false, arguments: null, cancellationToken: cancellationToken);
@@ -58,5 +60,9 @@ public sealed class RabbitMqPublisher(RabbitMqConnection connection)
 
     public static Task EnsureScheduleChangesQueueAsync(IChannel channel, CancellationToken cancellationToken) =>
         channel.QueueDeclareAsync(ScheduleChangesQueueName, durable: true, exclusive: false, autoDelete: false,
+            arguments: null, cancellationToken: cancellationToken);
+
+    public static Task EnsureVerifiedWorkQueueAsync(IChannel channel, CancellationToken cancellationToken) =>
+        channel.QueueDeclareAsync(VerifiedWorkQueueName, durable: true, exclusive: false, autoDelete: false,
             arguments: null, cancellationToken: cancellationToken);
 }

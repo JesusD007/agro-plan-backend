@@ -24,6 +24,7 @@ if (!string.IsNullOrWhiteSpace(rabbitMqUrl))
     builder.Services.AddHostedService<SowingPlanConsumer>();
     builder.Services.AddHostedService<PlantingFrameConsumer>();
     builder.Services.AddHostedService<ScheduleChangeProposalConsumer>();
+    builder.Services.AddHostedService<VerifiedWorkRewardsConsumer>();
 }
 else
 {
