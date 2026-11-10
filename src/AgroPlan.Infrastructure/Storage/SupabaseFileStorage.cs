@@ -31,6 +31,18 @@ public sealed class SupabaseFileStorage(IConfiguration configuration) : IFileSto
         string contentType, DateTimeOffset expiresAt)
     {
         var key = $"farms/{farmId:D}/logbook/{entryId:D}/{attachmentId:D}/staging";
+        return CreateUploadAuthorization(key, contentType, expiresAt);
+    }
+
+    public UploadAuthorization CreateTaskEvidenceUploadAuthorization(Guid farmId, Guid taskId, Guid submissionId,
+        string contentType, DateTimeOffset expiresAt)
+    {
+        var key = $"farms/{farmId:D}/work-tasks/{taskId:D}/evidence/{submissionId:D}/staging";
+        return CreateUploadAuthorization(key, contentType, expiresAt);
+    }
+
+    private UploadAuthorization CreateUploadAuthorization(string key, string contentType, DateTimeOffset expiresAt)
+    {
         var url = _client.Value.GetPreSignedURL(new GetPreSignedUrlRequest
         {
             BucketName = _bucket,

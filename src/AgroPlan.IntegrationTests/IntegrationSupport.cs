@@ -145,6 +145,11 @@ internal sealed class RecordingFileStorage : IFileStorage
         $"farms/{farmId:D}/logbook/{entryId:D}/{attachmentId:D}/staging",
         $"https://uploads.invalid/{attachmentId:D}", expiresAt, contentType);
 
+    public UploadAuthorization CreateTaskEvidenceUploadAuthorization(Guid farmId, Guid taskId, Guid submissionId,
+        string contentType, DateTimeOffset expiresAt) => new(
+        $"farms/{farmId:D}/work-tasks/{taskId:D}/evidence/{submissionId:D}/staging",
+        $"https://uploads.invalid/{submissionId:D}", expiresAt, contentType);
+
     public UploadAuthorization CreateDownloadAuthorization(string objectKey, DateTimeOffset expiresAt) => new(
         objectKey, $"https://downloads.invalid/{Uri.EscapeDataString(objectKey)}", expiresAt, "image/png");
 

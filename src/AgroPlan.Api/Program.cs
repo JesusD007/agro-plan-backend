@@ -111,6 +111,8 @@ builder.Services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHand
 builder.Services.AddScoped<AdvisorGrantService>();
 builder.Services.AddScoped<IFarmAuthorization, FarmAuthorizationService>();
 builder.Services.AddScoped<AssignedWorkerAuthorizationService>();
+builder.Services.AddScoped<AgroPlan.Application.Workforce.ITaskEvidenceFinalizationStore, TaskEvidenceFinalizationStore>();
+builder.Services.AddScoped<AgroPlan.Application.Workforce.TaskEvidenceFinalizationService>();
 builder.Services.AddScoped<ICropCatalogRepository, CropCatalogRepository>();
 builder.Services.AddScoped<CropCatalogService>();
 builder.Services.AddScoped<SubmitSowingPlan>();
