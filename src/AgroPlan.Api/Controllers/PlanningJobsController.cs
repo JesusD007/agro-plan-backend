@@ -17,6 +17,7 @@ namespace AgroPlan.Api.Controllers;
 public sealed class PlanningJobsController(
     AgroPlanDbContext dbContext,
     SubmitSowingPlan submitSowingPlan,
+    SubmitPlantingFrameProposal submitPlantingFrameProposal,
     ConfirmProposal confirmProposal,
     IFarmAuthorization farmAuthorization) : ControllerBase
 {
@@ -102,6 +103,57 @@ public sealed class PlanningJobsController(
         proposal.ResultJson,
         proposal.CreatedAt,
         proposal.UpdatedAt);
+
+    [HttpPost("planting-frames")]
+    public async Task<ActionResult<PlantingFrameJobResponse>> SubmitPlantingFrames(Guid farmId,
+        SubmitPlantingFrameRequest request, CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid) return ValidationProblem(ModelState);
+        var userId = User.FindFirstValue("sub") ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
+        var cycle = await dbContext.CropCycles.AsNoTracking().Where(item => item.FarmId == farmId && item.Id == request.CropCycleId)
+            .Include(item => item.CropCatalogEntry).SingleOrDefaultAsync(cancellationToken);
+        if (cycle is null) return BadRequest(new { message = "The crop cycle does not belong to this farm." });
+        var parcelExists = await dbContext.Parcels.AsNoTracking().AnyAsync(item => item.FarmId == farmId && item.Id == cycle.ParcelId, cancellationToken);
+        if (!parcelExists) return Conflict(new { message = "The crop cycle has no valid farm parcel." });
+        var (proposal, message) = submitPlantingFrameProposal.Create(farmId, cycle.Id, userId, cycle.CropCatalogEntry.Code, cycle.ParcelId, DateTimeOffset.UtcNow);
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        dbContext.PlantingFrameProposals.Add(proposal);
+        dbContext.OutboxMessages.Add(message);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return AcceptedAtAction(nameof(GetPlantingFrames), new { farmId, jobId = proposal.Id }, ToFrameResponse(proposal));
+    }
+
+    [HttpGet("planting-frames/{jobId:guid}")]
+    public async Task<ActionResult<PlantingFrameJobResponse>> GetPlantingFrames(Guid farmId, Guid jobId, CancellationToken cancellationToken)
+    {
+        var proposal = await dbContext.PlantingFrameProposals.AsNoTracking().SingleOrDefaultAsync(item => item.FarmId == farmId && item.Id == jobId, cancellationToken);
+        return proposal is null ? NotFound() : Ok(ToFrameResponse(proposal));
+    }
+
+    [HttpPost("planting-frames/{jobId:guid}/confirm")]
+    public async Task<IActionResult> ConfirmPlantingFrame(Guid farmId, Guid jobId, ConfirmPlantingFrameRequest request, CancellationToken cancellationToken)
+    {
+        var userId = User.FindFirstValue("sub") ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
+        var role = await farmAuthorization.GetActiveRoleAsync(farmId, userId, cancellationToken);
+        if (role is not (AgroPlan.Domain.Farms.FarmRole.Owner or AgroPlan.Domain.Farms.FarmRole.Administrator)) return Forbid();
+        var proposal = await dbContext.PlantingFrameProposals.SingleOrDefaultAsync(item => item.FarmId == farmId && item.Id == jobId, cancellationToken);
+        if (proposal is null) return NotFound();
+        var cycle = await dbContext.CropCycles.SingleOrDefaultAsync(item => item.FarmId == farmId && item.Id == proposal.CropCycleId, cancellationToken);
+        if (cycle is null) return Conflict(new { code = "CROP_CYCLE_NOT_FOUND" });
+        var now = DateTimeOffset.UtcNow;
+        if (!proposal.Confirm(userId, request.FrameworkId, now))
+            return Conflict(new { code = "FRAME_OPTION_NOT_SELECTABLE", message = "The proposal is incomplete or the selected sourced frame is unavailable." });
+        cycle.SelectFramework(request.FrameworkId, now);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return Ok(ToFrameResponse(proposal));
+    }
+
+    private static PlantingFrameJobResponse ToFrameResponse(PlantingFrameProposal proposal) => new(
+        proposal.Id, proposal.FarmId, proposal.CropCycleId, proposal.Status.ToString().ToLowerInvariant(), proposal.FailureCode,
+        proposal.FailureSummary, proposal.ResultJson, proposal.CreatedAt, proposal.UpdatedAt, proposal.SelectedFrameworkId);
 }
 
 public sealed record SubmitSowingPlanRequest([property: Required] Guid CropCycleId);
@@ -116,3 +168,8 @@ public sealed record SowingJobResponse(
     string? ResultJson,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt);
+
+public sealed record SubmitPlantingFrameRequest([property: Required] Guid CropCycleId);
+public sealed record ConfirmPlantingFrameRequest([property: Required] Guid FrameworkId);
+public sealed record PlantingFrameJobResponse(Guid Id, Guid FarmId, Guid CropCycleId, string Status,
+    string? FailureCode, string? FailureSummary, string? ResultJson, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, Guid? SelectedFrameworkId);

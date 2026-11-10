@@ -108,6 +108,11 @@ public sealed class OutboxPublisher(
             var proposal = await dbContext.SowingProposals.SingleOrDefaultAsync(item => item.Id == storedMessage.AggregateId, cancellationToken);
             proposal?.MarkFailed("BROKER_DELIVERY_FAILED", "The asynchronous queue could not accept this request.", now);
         }
+        if (deadLettered && storedMessage.EventType == "planting-frame.requested")
+        {
+            var proposal = await dbContext.PlantingFrameProposals.SingleOrDefaultAsync(item => item.Id == storedMessage.AggregateId, cancellationToken);
+            proposal?.MarkFailed("BROKER_DELIVERY_FAILED", "The asynchronous queue could not accept this request.", now);
+        }
         await dbContext.SaveChangesAsync(cancellationToken);
         if (deadLettered)
             logger.LogError("Outbox message {OutboxId} exhausted {AttemptCount} delivery attempts ({ExceptionType}).", message.Id, message.AttemptCount, exception.GetType().Name);

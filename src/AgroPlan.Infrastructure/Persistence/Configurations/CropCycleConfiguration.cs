@@ -28,5 +28,6 @@ public sealed class CropCycleConfiguration : IEntityTypeConfiguration<CropCycle>
             .WithMany()
             .HasForeignKey(cycle => cycle.CropCatalogEntryId)
             .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<CropFramework>().WithMany().HasForeignKey(cycle => cycle.SelectedFrameworkId).OnDelete(DeleteBehavior.Restrict);
     }
 }

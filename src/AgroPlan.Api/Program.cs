@@ -102,6 +102,8 @@ builder.Services.AddScoped<IFarmAuthorization, FarmAuthorizationService>();
 builder.Services.AddScoped<ICropCatalogRepository, CropCatalogRepository>();
 builder.Services.AddScoped<CropCatalogService>();
 builder.Services.AddScoped<SubmitSowingPlan>();
+builder.Services.AddScoped<SubmitPlantingFrameProposal>();
+builder.Services.AddScoped<AgroPlan.Application.Planning.PlantingFrameCalculator>();
 builder.Services.AddScoped<ConfirmProposal>();
 builder.Services.AddRateLimiter(options =>
 {

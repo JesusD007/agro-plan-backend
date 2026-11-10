@@ -35,6 +35,7 @@ public sealed class CropCycle
     public Guid FarmId { get; private set; }
     public Guid ParcelId { get; private set; }
     public Guid CropCatalogEntryId { get; private set; }
+    public Guid? SelectedFrameworkId { get; private set; }
     public DateOnly? DesiredPlantingDate { get; private set; }
     public string? Variety { get; private set; }
     public string? Notes { get; private set; }
@@ -59,6 +60,13 @@ public sealed class CropCycle
         DesiredPlantingDate = desiredPlantingDate;
         Variety = Normalize(variety);
         Notes = Normalize(notes);
+        UpdatedAt = updatedAt;
+    }
+
+    public void SelectFramework(Guid frameworkId, DateTimeOffset updatedAt)
+    {
+        if (frameworkId == Guid.Empty) throw new ArgumentException("Framework id is required.", nameof(frameworkId));
+        SelectedFrameworkId = frameworkId;
         UpdatedAt = updatedAt;
     }
 

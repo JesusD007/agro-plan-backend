@@ -20,8 +20,10 @@ public sealed class AgroPlanDbContext(DbContextOptions<AgroPlanDbContext> option
     public DbSet<RecoveryAuditEntry> RecoveryAuditEntries => Set<RecoveryAuditEntry>();
     public DbSet<CropCatalogEntry> CropCatalogEntries => Set<CropCatalogEntry>();
     public DbSet<AgronomicParameter> AgronomicParameters => Set<AgronomicParameter>();
+    public DbSet<CropFramework> CropFrameworks => Set<CropFramework>();
     public DbSet<CropCycle> CropCycles => Set<CropCycle>();
     public DbSet<SowingProposal> SowingProposals => Set<SowingProposal>();
+    public DbSet<PlantingFrameProposal> PlantingFrameProposals => Set<PlantingFrameProposal>();
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
 
     protected override void OnModelCreating(ModelBuilder builder)

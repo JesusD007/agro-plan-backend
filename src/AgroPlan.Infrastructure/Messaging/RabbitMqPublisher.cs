@@ -7,6 +7,7 @@ namespace AgroPlan.Infrastructure.Messaging;
 public sealed class RabbitMqPublisher(RabbitMqConnection connection)
 {
     public const string QueueName = "agroplan.sowing-plans.v1";
+    public const string PlantingFramesQueueName = "agroplan.planting-frames.v1";
 
     public async Task PublishAsync(OutboxMessage message, CancellationToken cancellationToken)
     {
@@ -15,7 +16,8 @@ public sealed class RabbitMqPublisher(RabbitMqConnection connection)
             publisherConfirmationsEnabled: true,
             publisherConfirmationTrackingEnabled: true);
         await using var channel = await brokerConnection.CreateChannelAsync(options, cancellationToken);
-        await EnsureQueueAsync(channel, cancellationToken);
+        var queueName = message.EventType == "planting-frame.requested" ? PlantingFramesQueueName : QueueName;
+        await channel.QueueDeclareAsync(queueName, durable: true, exclusive: false, autoDelete: false, arguments: null, cancellationToken: cancellationToken);
 
         var properties = new BasicProperties
         {
@@ -28,7 +30,7 @@ public sealed class RabbitMqPublisher(RabbitMqConnection connection)
         var body = Encoding.UTF8.GetBytes(message.PayloadJson);
         await channel.BasicPublishAsync(
             exchange: string.Empty,
-            routingKey: QueueName,
+            routingKey: queueName,
             mandatory: true,
             basicProperties: properties,
             body: body,
@@ -43,4 +45,8 @@ public sealed class RabbitMqPublisher(RabbitMqConnection connection)
             autoDelete: false,
             arguments: null,
             cancellationToken: cancellationToken);
+
+    public static Task EnsurePlantingFramesQueueAsync(IChannel channel, CancellationToken cancellationToken) =>
+        channel.QueueDeclareAsync(PlantingFramesQueueName, durable: true, exclusive: false, autoDelete: false,
+            arguments: null, cancellationToken: cancellationToken);
 }

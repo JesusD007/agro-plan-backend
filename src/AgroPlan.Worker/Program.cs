@@ -22,6 +22,7 @@ if (!string.IsNullOrWhiteSpace(rabbitMqUrl))
     builder.Services.AddSingleton<IGeminiProposalProvider, GeminiProposalProvider>();
     builder.Services.AddSingleton<IClimateProvider, UnconfiguredClimateProvider>();
     builder.Services.AddHostedService<SowingPlanConsumer>();
+    builder.Services.AddHostedService<PlantingFrameConsumer>();
 }
 else
 {
