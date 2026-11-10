@@ -14,6 +14,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgroPlan.Worker", "AgroPlan
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgroPlan.UnitTests", "AgroPlan.UnitTests\AgroPlan.UnitTests.csproj", "{FD5C1347-570E-443A-8F36-F9D7817869B3}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgroPlan.IntegrationTests", "AgroPlan.IntegrationTests\AgroPlan.IntegrationTests.csproj", "{88EAD788-6D85-41DB-9F08-0D344BE502D7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -44,5 +46,9 @@ Global
 		{FD5C1347-570E-443A-8F36-F9D7817869B3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FD5C1347-570E-443A-8F36-F9D7817869B3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FD5C1347-570E-443A-8F36-F9D7817869B3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{88EAD788-6D85-41DB-9F08-0D344BE502D7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{88EAD788-6D85-41DB-9F08-0D344BE502D7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{88EAD788-6D85-41DB-9F08-0D344BE502D7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{88EAD788-6D85-41DB-9F08-0D344BE502D7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

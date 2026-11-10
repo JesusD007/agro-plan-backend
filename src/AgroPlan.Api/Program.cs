@@ -200,3 +200,5 @@ internal sealed class BearerSecuritySchemeTransformer(IAuthenticationSchemeProvi
         };
     }
 }
+
+public partial class Program { }
