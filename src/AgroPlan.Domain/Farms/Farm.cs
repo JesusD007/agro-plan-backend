@@ -30,7 +30,11 @@ public sealed class Farm
         Location = string.IsNullOrWhiteSpace(location) ? null : location.Trim();
     }
 
-    public void ProvisionWorkerEntitlement(WorkerEntitlement entitlement) => WorkerEntitlement = entitlement;
+    public void ProvisionWorkerEntitlement(WorkerEntitlement entitlement)
+    {
+        if (!Enum.IsDefined(entitlement)) throw new ArgumentOutOfRangeException(nameof(entitlement));
+        WorkerEntitlement = entitlement;
+    }
 }
 
 public enum WorkerEntitlement

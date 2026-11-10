@@ -52,6 +52,17 @@ public sealed class WorkerInvitationTests
         Assert.Equal(renewedAt.AddDays(7), invitation.ExpiresAt);
     }
 
+    [Fact]
+    public void Farm_entitlement_defaults_to_basic_and_rejects_unknown_tiers()
+    {
+        var farm = new Farm(Guid.NewGuid(), "Entitlement test", null, DateTimeOffset.UtcNow);
+
+        Assert.Equal(WorkerEntitlement.Basic, farm.WorkerEntitlement);
+        Assert.Throws<ArgumentOutOfRangeException>(() => farm.ProvisionWorkerEntitlement((WorkerEntitlement)99));
+        farm.ProvisionWorkerEntitlement(WorkerEntitlement.Premium);
+        Assert.Equal(WorkerEntitlement.Premium, farm.WorkerEntitlement);
+    }
+
     private static WorkerInvitation Create(DateTimeOffset now) => new(Guid.NewGuid(), Guid.NewGuid(),
         "worker@example.test", new string('a', 64), "owner-1", now, now.AddDays(7));
 }
