@@ -26,10 +26,10 @@ Deliver AgroPlan's farm-scoped backend pilot first, then expand into farm operat
   2. A producer can request a sowing proposal, inspect climate availability or missing-data status plus its factors and uncertainty, and explicitly confirm only a complete, supported proposal; live climate and numeric agronomic advice stay disabled until their sources are selected and validated.
   3. A producer can compare planting-frame options whose capacity is calculated by deterministic rules and select one with an explicit confirmation.
   4. An authorized producer can add and correct manual logbook entries while preserving the correction history.
-**Plans:** 8 plans
+**Plans:** 1/8 plans executed
 
 Plans:
-- [ ] 01-01-PLAN.md — .NET skeleton and owner farm tracer
+- [x] 01-01-PLAN.md — .NET skeleton and owner farm tracer
 - [ ] 01-02-PLAN.md — Account sessions and support-mediated recovery
 - [ ] 01-03-PLAN.md — Farm administration and parcel management
 - [ ] 01-04-PLAN.md — Five-crop catalog and farm crop cycles
@@ -98,7 +98,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Farm Planning Pilot | 0/TBD | Not started | - |
+| 1. Farm Planning Pilot | 1/8 | In Progress | - |
 | 2. Farm Operations and Safety | 0/TBD | Not started | - |
 | 3. Workforce and Offline Operations | 0/TBD | Not started | - |
 | 4. Applied Farm Intelligence | 0/TBD | Not started | - |

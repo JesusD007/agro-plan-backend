@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 2
+open_count: 1
 waived_count: 0
-fixed_count: 0
+fixed_count: 1
 total_count: 2
-last_updated: 2026-11-10T03:34:15.140Z
+last_updated: 2026-11-10T03:43:26.453Z
 ---
 
 # Broken Windows Ledger
@@ -16,7 +16,7 @@ last_updated: 2026-11-10T03:34:15.140Z
 | id | phase | kind | file | line | description | status | reason | recorded_at | resolved_at |
 |----|-------|------|------|------|-------------|--------|--------|-------------|-------------|
 | 1 | 01 | stub | src/AgroPlan.Worker/Program.cs |  | Worker entry point is intentionally idle; proposal consumers are owned by later phase plans. | open |  | 2026-11-10T03:34:14.012Z |  |
-| 2 | 01 | unrun-verify | src/AgroPlan.sln |  | Compile-only dotnet build was not run because the host has SDK 8.0.204 and the plan targets .NET 10; SDK 10 is a required prerequisite. | open |  | 2026-11-10T03:34:15.140Z |  |
+| 2 | 01 | unrun-verify | src/AgroPlan.sln |  | Compile-only dotnet build was not run because the host has SDK 8.0.204 and the plan targets .NET 10; SDK 10 is a required prerequisite. | fixed |  | 2026-11-10T03:34:15.140Z | 2026-11-10T03:43:26.453Z |
 
 ````json
 [
@@ -40,10 +40,10 @@ last_updated: 2026-11-10T03:34:15.140Z
     "file": "src/AgroPlan.sln",
     "line": null,
     "description": "Compile-only dotnet build was not run because the host has SDK 8.0.204 and the plan targets .NET 10; SDK 10 is a required prerequisite.",
-    "status": "open",
+    "status": "fixed",
     "reason": "",
     "recorded_at": "2026-11-10T03:34:15.140Z",
-    "resolved_at": null,
+    "resolved_at": "2026-11-10T03:43:26.453Z",
     "milestone": null
   }
 ]

@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 01
 current_phase_name: Farm Planning Pilot
 status: executing
-stopped_at: Phase 1 context gathered
-last_updated: "2026-11-10T03:02:44.845Z"
+stopped_at: Completed 01-01-PLAN.md
+last_updated: "2026-11-10T03:44:45.955Z"
 last_activity: 2026-11-09
 last_activity_desc: Initialized planning from the approved document set.
-state_head: 62e9dc3a14664d4b137bc77634989cfb31b4485a
+state_head: e9bb103c6603811b8ffad756bc8adeb1f473adea
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 8
-  completed_plans: 0
+  completed_plans: 1
   percent: 0
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-11-09)
 ## Current Position
 
 Phase: 01 (Farm Planning Pilot) — READY TO EXECUTE
-Plan: 0 of 8 in current phase
+Plan: 1 of 8 in current phase
 Status: Ready to execute
 Last activity: 2026-11-09 — Initialized planning from the approved document set.
 
@@ -41,6 +41,11 @@ Progress: ░░░░░░░░░░ [░░░░░░░░░░] 0%
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | - | - | - | - |
+**Per-Plan Metrics:**
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| Phase 01 P01 | 22 | 2 tasks | 22 files |
 
 ## Accumulated Context
 
@@ -49,6 +54,9 @@ Progress: ░░░░░░░░░░ [░░░░░░░░░░] 0%
 - Use the user-confirmed ASP.NET Core/.NET, Supabase, CloudAMQP, and SignalR architecture proposal as the implementation baseline.
 - Deliver the six confirmed pilot capabilities before expanded Gestão, Mercado, and transport scope.
 - Consult the excluded actor/function flows source during later phase planning.
+- [Phase 01]: Issue first-party short-lived signed JWT access tokens with server-side signing material.
+- [Phase 01]: Validate active owner/administrator farm membership in PostgreSQL for every farm-scoped request.
+- [Phase 01]: Create the farm and owner membership atomically in one PostgreSQL transaction.
 
 ### Pending Todos
 
@@ -57,8 +65,7 @@ None yet.
 ### Blockers/Concerns
 
 - Climate source and crop-specific numeric agronomic sources remain explicitly unselected; neither may be activated for production until selected and validated.
-- The inspected environment has .NET SDK 8.0.204; install .NET SDK 10 before compile-only verification.
-- The backend repository has no commits or base history yet; all changes are local on `develop`.
+- Plan 01-01 implementation is committed on `gsd/phase-01-plan01-build-fix`; those commits still need to be integrated into `develop`.
 
 ## Deferred Items
 
@@ -68,6 +75,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-10T02:20:13.335Z
-Stopped at: Phase 1 context gathered
-Resume file: .planning/phases/01-farm-planning-pilot/01-CONTEXT.md
+Last session: 2026-11-10T03:44:45.917Z
+Stopped at: Completed 01-01-PLAN.md
+Resume file: .planning/phases/01-farm-planning-pilot/01-02-PLAN.md
