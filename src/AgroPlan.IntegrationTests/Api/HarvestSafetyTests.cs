@@ -77,6 +77,11 @@ public sealed class HarvestSafetyTests(PostgreSqlFixture postgres)
         Assert.Contains(applicationId.ToString(), json.RootElement.GetProperty("assessmentEvidenceJson").GetString());
         using var crossFarm = await client.GetAsync($"/api/farms/{Guid.NewGuid()}/harvest-records", TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.Forbidden, crossFarm.StatusCode);
+        using var crossFarmAppend = await client.PostAsJsonAsync($"/api/farms/{Guid.NewGuid()}/harvest-records", new
+        {
+            parcelId, cropCycleId = cycle, harvestedAt, quantity = 50m, unit = "kg"
+        }, TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.Forbidden, crossFarmAppend.StatusCode);
     }
 
     [Fact]
@@ -124,6 +129,10 @@ public sealed class HarvestSafetyTests(PostgreSqlFixture postgres)
         await using var checkScope = factory.Services.CreateAsyncScope();
         var checkDb = checkScope.ServiceProvider.GetRequiredService<AgroPlanDbContext>();
         var original = await checkDb.HarvestEntries.SingleAsync(x => x.Id == originalId, TestContext.Current.CancellationToken);
+        checkDb.Entry(original).Property(x => x.HarvestedAt).CurrentValue = harvestedAt.AddDays(1);
+        await Assert.ThrowsAsync<DbUpdateException>(() => checkDb.SaveChangesAsync(TestContext.Current.CancellationToken));
+        checkDb.Entry(original).State = EntityState.Detached;
+        original = await checkDb.HarvestEntries.SingleAsync(x => x.Id == originalId, TestContext.Current.CancellationToken);
         checkDb.HarvestEntries.Remove(original);
         await Assert.ThrowsAsync<DbUpdateException>(() => checkDb.SaveChangesAsync(TestContext.Current.CancellationToken));
     }
