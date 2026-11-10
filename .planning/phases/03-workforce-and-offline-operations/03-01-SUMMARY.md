@@ -15,11 +15,11 @@ provides:
 affects: [03-02-worker-tasks, workforce, authorization, farm-entitlements]
 
 actuals:
-  tokens: 9823
+  tokens: 9991
   tasks: 2
-  commits: 2
+  commits: 4
   plan_head_before: 5c2244712e62960a30d31367233dab8434d87fc1
-  plan_head_after: 48b464fa54b3d92a46db2cc20bb41c93bdc0f1b4
+  plan_head_after: 0f0aeee0b2995bee2f016d266e3f0b673d0fbab0
 
 tech-stack:
   added: []
@@ -83,6 +83,9 @@ coverage:
       - kind: unit
         ref: src/AgroPlan.UnitTests/Workforce/WorkerInvitationTests.cs#Invitation_expires_after_seven_days_and_accepts_matching_verified_email_once
         status: pass
+      - kind: unit
+        ref: src/AgroPlan.UnitTests/Workforce/WorkerInvitationTests.cs#Farm_entitlement_defaults_to_basic_and_rejects_unknown_tiers
+        status: pass
     human_judgment: false
 
 duration: 25min
@@ -98,7 +101,7 @@ status: complete
 
 - **Duration:** 25 minutes
 - **Started:** 2026-11-10T20:22:00Z
-- **Completed:** 2026-11-10T20:47:00Z
+- **Completed:** 2026-11-10T20:50:00Z
 - **Tasks:** 2/2
 - **Files modified:** 11
 
@@ -113,10 +116,12 @@ status: complete
 
 1. **Task 1: Worker invitation acceptance end-to-end tracer** — `c6a7bb3` (test RED)
 2. **Task 1 implementation and Task 2 lifecycle, entitlement, and capacity behavior** — `48b464f` (feat GREEN)
+3. **Task 2: Reject unknown worker entitlement values** — `0f0aeee` (fix)
+4. **Initial plan metadata close-out** — `1cddf0d` (updated after the entitlement guard)
 
 ## Verification
 
-- `dotnet test src/AgroPlan.UnitTests/AgroPlan.UnitTests.csproj --filter "FullyQualifiedName~WorkerInvitationTests"` — 4 passed, 0 failed.
+- `dotnet test src/AgroPlan.UnitTests/AgroPlan.UnitTests.csproj --filter "FullyQualifiedName~WorkerInvitationTests"` — 5 passed, 0 failed.
 - `dotnet test src/AgroPlan.IntegrationTests/AgroPlan.IntegrationTests.csproj --filter "FullyQualifiedName~WorkerInvitationIntegrationTests"` — 4 passed, 0 failed, using PostgreSQL Testcontainers on Docker Desktop.
 - TDD RED evidence: the xUnit v3 role and endpoint tests executed and failed on the expected assertions (missing Worker role and HTTP 404). The GSD evidence checker accepted the test results after faithfully adapting VSTest TRX test names/outcomes into its supported TAP format. GREEN passed the same targeted tests.
 
@@ -144,9 +149,16 @@ status: complete
 - **Verification:** Renewal/cancellation integration test and full targeted integration suite pass.
 - **Committed in:** `48b464f`
 
+**3. [Rule 2 - Entitlement validation] Reject unknown farm worker entitlement values.**
+- **Found during:** Task 2 (capacity enforcement)
+- **Issue:** An undefined enum value would otherwise bypass the Basic cap and behave as Premium.
+- **Fix:** Validate server-side entitlement provisioning against the defined Basic and Premium values.
+- **Verification:** `Farm_entitlement_defaults_to_basic_and_rejects_unknown_tiers` passes.
+- **Committed in:** `0f0aeee`
+
 ---
 
-**Total deviations:** 2 auto-fixed (Rule 2)
+**Total deviations:** 3 auto-fixed (Rule 2)
 **Impact on plan:** Both changes preserve the planned behavior while preventing unusable email links and lifecycle races.
 
 ## Issues Encountered
@@ -166,11 +178,11 @@ Phase 3 Plan 03-02 can add task assignment on top of the persisted Worker member
 ## TDD Gate Compliance
 
 - **RED:** `Worker_role_is_part_of_the_farm_membership_contract` failed because `FarmRole.Worker` did not exist. `Owner_can_invite_verified_email_and_only_digest_is_persisted` failed because the route returned 404. Both failures were test assertions, not build or fixture failures.
-- **GREEN:** The domain, persistence, API, and entitlement implementation made the four unit tests and four PostgreSQL integration tests pass.
+- **GREEN:** The domain, persistence, API, and entitlement implementation made the five unit tests and four PostgreSQL integration tests pass.
 - **REFACTOR:** Added HTTPS URL validation and transaction locks, then reran the targeted tests successfully.
 
 ## Self-Check: PASSED
 
 - All planned domain, API, persistence, migration, and test artifacts exist.
-- Commits `c6a7bb3` and `48b464f` are ancestors of HEAD.
-- Summary measurement ledger: base `5c2244712e62960a30d31367233dab8434d87fc1`, plan HEAD `48b464fa54b3d92a46db2cc20bb41c93bdc0f1b4`, 2 commits before metadata close-out.
+- Commits `c6a7bb3`, `48b464f`, and `0f0aeee` are ancestors of HEAD.
+- Summary measurement ledger: base `5c2244712e62960a30d31367233dab8434d87fc1`, plan HEAD `0f0aeee0b2995bee2f016d266e3f0b673d0fbab0`, 4 commits measured before this metadata update.
