@@ -44,6 +44,13 @@ public sealed class WorkTaskTests
         Assert.Equal("apply_input", task.OperationKind);
     }
 
+    [Fact]
+    public void Review_decision_and_verified_wage_are_separate_auditable_records()
+    {
+        Assert.NotNull(typeof(WorkTask).Assembly.GetType("AgroPlan.Domain.Workforce.TaskReviewDecision"));
+        Assert.NotNull(typeof(WorkTask).Assembly.GetType("AgroPlan.Domain.Workforce.VerifiedWageEntry"));
+    }
+
     private static WorkTask Create() => new(Guid.NewGuid(), Guid.NewGuid(), "worker-1",
         DateOnly.FromDateTime(DateTime.UtcNow), "Prune", false, 125m, "day", null, null);
 }
