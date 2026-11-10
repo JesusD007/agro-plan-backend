@@ -9,7 +9,7 @@ Deliver AgroPlan's farm-scoped backend pilot first, then expand into farm operat
 **Phase Numbering:** Integer phases (1, 2, 3) are planned work.
 
 - [x] **Phase 1: Farm Planning Pilot** - Producers can manage core farm data, review planting assistance, and keep a manual logbook. (completed 2026-11-10)
-- [ ] **Phase 2: Farm Operations and Safety** - Producers can record and analyze operating costs, inputs, irrigation, harvest, calendars, and authorized advisory access.
+- [x] **Phase 2: Farm Operations and Safety** - Producers can record and analyze operating costs, inputs, irrigation, harvest, calendars, and authorized advisory access. (completed 2026-11-10)
 - [ ] **Phase 3: Workforce and Offline Operations** - Workers and administrators can coordinate tasks, evidence, verification, and reliable offline synchronization.
 - [ ] **Phase 4: Applied Farm Intelligence** - Producers can use voice drafts, weekly summaries, and future image-based agronomy reports with human review.
 - [ ] **Phase 5: Marketplace and Traceability** - Producers and buyers can transact lots and verify origin and operation history.
@@ -51,7 +51,7 @@ Plans:
   2. Cost and harvest reports use recorded units and source data, and a harvest is blocked or flagged until an input's documented withholding period has elapsed.
   3. A producer can view a crop calendar and reference prices, and receive climate or stage-related advisories with their source and validity.
   4. A producer can grant an advisor explicit, scoped, time-bound access and revoke it; the advisor can only access authorized farm data and reports.
-**Plans**: 8/8 plans executed
+**Plans**: 8/8 plans complete
 - [x] 02-01-PLAN.md
 - [x] 02-02-PLAN.md
 - [x] 02-03-PLAN.md
@@ -111,7 +111,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Farm Planning Pilot | 12/12 | Complete    | 2026-11-10 |
-| 2. Farm Operations and Safety | 8/8 | In Progress | - |
+| 2. Farm Operations and Safety | 8/8 | Complete    | 2026-11-10 |
 | 3. Workforce and Offline Operations | 0/TBD | Not started | - |
 | 4. Applied Farm Intelligence | 0/TBD | Not started | - |
 | 5. Marketplace and Traceability | 0/TBD | Not started | - |
