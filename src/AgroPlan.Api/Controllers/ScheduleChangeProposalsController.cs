@@ -32,8 +32,12 @@ public sealed class ScheduleChangeProposalsController(AgroPlanDbContext db, IFar
         templates = templates.Where(x => x.IsUsableAt(now, cycle.CropCatalogEntryId, cycle.CropCatalogEntry.Region, null)).ToList();
         if (templates.Count != 1) return Conflict(new { status = "unavailable", missingInputs = new[] { "current_matching_crop_calendar_rule" } });
         var template = templates[0];
-        var sowing = await db.LogbookEntries.AsNoTracking().Where(x => x.FarmId == farmId && x.CropCycleId == cropCycleId && x.ActivityType == LogbookActivityType.Sowing)
-            .OrderBy(x => x.OccurredAt).FirstOrDefaultAsync(ct);
+        var sowingRows = await db.LogbookEntries.AsNoTracking()
+            .Where(x => x.FarmId == farmId && x.CropCycleId == cropCycleId && x.ActivityType == LogbookActivityType.Sowing)
+            .Select(x => new { x.Id, x.CorrectsEntryId, x.OccurredAt }).ToListAsync(ct);
+        var correctedSowingIds = sowingRows.Where(x => x.CorrectsEntryId.HasValue)
+            .Select(x => x.CorrectsEntryId!.Value).ToHashSet();
+        var sowing = sowingRows.Where(x => !correctedSowingIds.Contains(x.Id)).OrderBy(x => x.OccurredAt).FirstOrDefault();
         if (sowing is null) return Conflict(new { status = "unavailable", missingInputs = new[] { "confirmed_planting_date" } });
         var userId = User.FindFirstValue("sub") ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();

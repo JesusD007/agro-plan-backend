@@ -30,7 +30,7 @@ public sealed class OutboxAndConsumerTests(PostgreSqlRabbitFixture services)
         await using var factory = new ApiTestFactory(services.ConnectionString, rabbitMqUrl: services.RabbitMqUrl);
         using var client = factory.CreateClient();
         var ownerId = $"calendar-owner-{Guid.NewGuid():N}";
-        Guid farmId; Guid cycleId; Guid templateId = Guid.NewGuid();
+        Guid farmId; Guid cycleId; Guid correctedSowingId; Guid templateId = Guid.NewGuid();
         await using (var scope = factory.Services.CreateAsyncScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AgroPlanDbContext>();
@@ -42,8 +42,12 @@ public sealed class OutboxAndConsumerTests(PostgreSqlRabbitFixture services)
             db.CropCalendarTemplates.Add(new CropCalendarTemplate(templateId, crop.Id, "calendar-test-v1", "approved fixture", "source-v1",
                 CropCalendarTemplateStatus.Validated, null, null, now.AddDays(-1), now.AddDays(7), null, null,
                 [new CropCalendarTask("irrigation-check", "growth", "Check irrigation", "Follow current sourced schedule.", 12, 1, CropCalendarOperationKind.Irrigation)]));
-            db.LogbookEntries.Add(new LogbookEntry(Guid.NewGuid(), farmId, parcelId, cycleId, LogbookActivityType.Sowing,
-                now.AddDays(-10), "Sowing confirmed", ownerId, now.AddDays(-10)));
+            var originalSowingId = Guid.NewGuid();
+            db.LogbookEntries.Add(new LogbookEntry(originalSowingId, farmId, parcelId, cycleId, LogbookActivityType.Sowing,
+                now.AddDays(-10), "Original sowing date", ownerId, now.AddDays(-10)));
+            correctedSowingId = Guid.NewGuid();
+            db.LogbookEntries.Add(new LogbookEntry(correctedSowingId, farmId, parcelId, cycleId, LogbookActivityType.Sowing,
+                now.AddDays(-8), "Corrected sowing date", ownerId, now.AddDays(-8), originalSowingId, "Producer corrected planting date"));
             await db.SaveChangesAsync();
         }
         TestData.SetBearer(client, ownerId);
@@ -51,6 +55,8 @@ public sealed class OutboxAndConsumerTests(PostgreSqlRabbitFixture services)
         Assert.Equal(HttpStatusCode.Accepted, create.StatusCode);
         using var created = JsonDocument.Parse(await create.Content.ReadAsStringAsync());
         var proposalId = created.RootElement.GetProperty("id").GetGuid();
+        var evidenceIds = created.RootElement.GetProperty("evidenceIds").EnumerateArray().Select(x => x.GetString()).ToArray();
+        Assert.Contains(correctedSowingId.ToString("N"), evidenceIds);
         using var premature = await client.PostAsJsonAsync($"/api/farms/{farmId}/crop-cycles/{cycleId}/schedule-change-proposals/{proposalId}/confirm", new { version = 1 });
         Assert.Equal(HttpStatusCode.Conflict, premature.StatusCode);
 
@@ -85,7 +91,7 @@ public sealed class OutboxAndConsumerTests(PostgreSqlRabbitFixture services)
             await using var finalScope = factory.Services.CreateAsyncScope();
             var finalDb = finalScope.ServiceProvider.GetRequiredService<AgroPlanDbContext>();
             var schedule = await finalDb.CalendarScheduleItems.SingleAsync(x => x.FarmId == farmId && x.CropCycleId == cycleId && x.TaskKey == "irrigation-check");
-            Assert.Equal(DateOnly.FromDateTime(DateTime.UtcNow.AddDays(2)), schedule.DueDate);
+            Assert.Equal(DateOnly.FromDateTime(DateTime.UtcNow.AddDays(4)), schedule.DueDate);
             Assert.Equal(proposalId, schedule.LastProposalId);
         }
         finally { await worker.StopAsync(); }
