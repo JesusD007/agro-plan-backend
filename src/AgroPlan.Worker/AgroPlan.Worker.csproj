@@ -1,4 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\AgroPlan.Application\AgroPlan.Application.csproj" />
     <ProjectReference Include="..\AgroPlan.Infrastructure\AgroPlan.Infrastructure.csproj" />

@@ -42,6 +42,7 @@ public static class IdentityEndpoints
     }
 
     private static bool IsValid<TRequest>(TRequest request, out IDictionary<string, string[]> errors)
+        where TRequest : notnull
     {
         var results = new List<ValidationResult>();
         var valid = Validator.TryValidateObject(request, new ValidationContext(request), results, validateAllProperties: true);
