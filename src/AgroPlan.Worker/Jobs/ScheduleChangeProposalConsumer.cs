@@ -60,10 +60,12 @@ public sealed class ScheduleChangeProposalConsumer(RabbitMqConnection connection
         var proposal = await db.ScheduleChangeProposals.SingleAsync(x => x.Id == message.ProposalId, token);
         try
         {
-            var cycle = await db.CropCycles.AsNoTracking().SingleOrDefaultAsync(x => x.FarmId == proposal.FarmId && x.Id == proposal.CropCycleId, token);
+            var cycle = await db.CropCycles.AsNoTracking().Include(x => x.CropCatalogEntry)
+                .SingleOrDefaultAsync(x => x.FarmId == proposal.FarmId && x.Id == proposal.CropCycleId, token);
             var templates = cycle is null ? new List<CropCalendarTemplate>() : await db.CropCalendarTemplates.AsNoTracking()
                 .Where(x => x.CropCatalogEntryId == cycle.CropCatalogEntryId && x.Status == CropCalendarTemplateStatus.Validated &&
                     x.EffectiveFrom <= now && (!x.EffectiveUntil.HasValue || x.EffectiveUntil >= now)).ToListAsync(token);
+            if (cycle is not null) templates = templates.Where(x => x.IsUsableAt(now, cycle.CropCatalogEntryId, cycle.CropCatalogEntry.Region, null)).ToList();
             if (templates.Count != 1 || $"{templates[0].Version}:{templates[0].SourceVersion}:{templates[0].EffectiveFrom:O}:{templates[0].EffectiveUntil:O}" != proposal.EvidenceVersion)
             {
                 proposal.Fail("EVIDENCE_STALE");
