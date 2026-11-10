@@ -511,7 +511,7 @@ Each documented requirement is assigned to exactly one roadmap phase. The six pi
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| REQ-pilot-accounts | Phase 1: Farm Planning Pilot | Pending |
+| REQ-pilot-accounts | Phase 1: Farm Planning Pilot | Complete |
 | REQ-pilot-farms-parcels | Phase 1: Farm Planning Pilot | Pending |
 | REQ-pilot-crop-cycle | Phase 1: Farm Planning Pilot | Pending |
 | REQ-pilot-sowing-plan | Phase 1: Farm Planning Pilot | Pending |
@@ -603,4 +603,3 @@ Each documented requirement is assigned to exactly one roadmap phase. The six pi
 ---
 *Requirements defined: 2026-11-09*
 *Last updated: 2026-11-09 after roadmap creation*
-
