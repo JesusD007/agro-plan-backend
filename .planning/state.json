@@ -6,7 +6,7 @@
     {
       "number": "1",
       "name": "Farm Planning Pilot",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "number": "2",
@@ -37,7 +37,7 @@
   "next": {
     "command": "$gsd-progress --next",
     "label": "Advance to the next step",
-    "reason": "Phase 1 of 6 · 0% · executing"
+    "reason": "Phase 1 of 6 · Plan 1 of 8 complete · executing"
   },
-  "updated_at": "2026-11-10T03:02:44.915Z"
+  "updated_at": "2026-11-10T03:46:47.069Z"
 }
