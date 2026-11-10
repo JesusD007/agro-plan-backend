@@ -25,6 +25,8 @@ public sealed record SowingGenerationInput(
 
 public sealed record GeminiProposalDraft(
     string Summary,
+    IReadOnlyList<string> SourceIds,
+    IReadOnlyList<string> MissingInputs,
     string Model,
     string PromptVersion,
     string SchemaVersion,

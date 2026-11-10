@@ -141,22 +141,59 @@ public sealed class SowingPlanConsumer(
                 snapshot.LocationDescription,
                 parameters,
                 climate);
-            var draft = await geminiProvider.GenerateDraftAsync(input, cancellationToken);
             var missingInputs = snapshot.MissingInputs
                 .Concat(climate.MissingInputs)
                 .Concat(parameters.Length == 0 ? ["validated.crop.parameters"] : [])
+                .Concat(cycle.CropCatalogEntry.ValidationStatus != CropCatalogValidationStatus.Validated ? ["validated.crop.catalog"] : [])
+                .Concat(string.IsNullOrWhiteSpace(snapshot.LocationDescription) ? ["parcel.location"] : [])
+                .Concat(["parcel.geometry"])
                 .Distinct(StringComparer.Ordinal)
                 .ToArray();
+            var climateValidated = climate.Status == "available" &&
+                                   !string.IsNullOrWhiteSpace(climate.SourceName) &&
+                                   climate.ForecastIssuedAt.HasValue &&
+                                   !string.IsNullOrWhiteSpace(climate.GeographicCoverage);
+            if (!climateValidated && !missingInputs.Contains("climate.forecast", StringComparer.Ordinal))
+                missingInputs = [.. missingInputs, "climate.forecast"];
+
+            if (missingInputs.Length > 0)
+            {
+                var safeResult = JsonSerializer.Serialize(new
+                {
+                    status = "insufficient_data",
+                    summary = "No agronomic recommendation was generated because required validated inputs are missing.",
+                    sourceIds = Array.Empty<string>(),
+                    missingInputs,
+                    sources = Array.Empty<object>(),
+                    climate,
+                    model = (string?)null,
+                    promptVersion = (string?)null,
+                    schemaVersion = (string?)null,
+                    generatedAt = now,
+                    modelProvenance = new { provider = "deterministic", model = (string?)null, promptVersion = (string?)null, schemaVersion = (string?)null },
+                    inputSnapshot = proposal.InputSnapshotJson,
+                    confirmationAllowed = false
+                }, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+                proposal.MarkCompleted(safeResult, DateTimeOffset.UtcNow);
+                await dbContext.SaveChangesAsync(cancellationToken);
+                return;
+            }
+
+            var draft = await geminiProvider.GenerateDraftAsync(input, cancellationToken);
+            var resultMissingInputs = missingInputs.Concat(draft.MissingInputs).Distinct(StringComparer.Ordinal).ToArray();
+            var sourceIds = draft.SourceIds.Distinct(StringComparer.Ordinal).ToArray();
             var result = JsonSerializer.Serialize(new
             {
                 status = "draft",
                 draft.Summary,
-                missingInputs,
+                sourceIds,
+                missingInputs = resultMissingInputs,
                 sources = parameters.Select(parameter => new { parameter.Key, parameter.SourceName, parameter.SourceUrl, parameter.ValidFrom, parameter.ValidTo }),
                 climate,
                 model = draft.Model,
                 promptVersion = draft.PromptVersion,
                 schemaVersion = draft.SchemaVersion,
+                modelProvenance = new { provider = "google-ai-studio", model = draft.Model, promptVersion = draft.PromptVersion, schemaVersion = draft.SchemaVersion },
                 generatedAt = draft.GeneratedAt,
                 inputSnapshot = proposal.InputSnapshotJson,
                 confirmationAllowed = false

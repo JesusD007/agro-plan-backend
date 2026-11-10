@@ -84,7 +84,8 @@ public sealed class GeminiProposalProvider(
                     .FirstOrDefault()?.Text;
                 var generated = ValidateResponse(json, input);
                 RecordSuccess();
-                return new GeminiProposalDraft(generated.Summary, model, PromptVersion, SchemaVersion, DateTimeOffset.UtcNow);
+                return new GeminiProposalDraft(generated.Summary, generated.SourceIds, generated.MissingInputs,
+                    model, PromptVersion, SchemaVersion, DateTimeOffset.UtcNow);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
