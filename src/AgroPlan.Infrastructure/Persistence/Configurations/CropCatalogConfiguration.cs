@@ -44,6 +44,6 @@ public sealed class AgronomicParameterConfiguration : IEntityTypeConfiguration<A
         builder.Property(parameter => parameter.SourceName).HasMaxLength(240);
         builder.Property(parameter => parameter.SourceUrl).HasMaxLength(2048);
         builder.Property(parameter => parameter.Region).HasMaxLength(160);
-        builder.HasIndex(parameter => new { parameter.CropCatalogEntryId, parameter.Key }).IsUnique();
+        builder.HasIndex(parameter => new { parameter.CropCatalogEntryId, parameter.Key });
     }
 }

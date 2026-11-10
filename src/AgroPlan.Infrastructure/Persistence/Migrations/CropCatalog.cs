@@ -33,9 +33,9 @@ public sealed class CropCatalog : Migration
             "\"Region\" character varying(160), " +
             "\"ValidFrom\" timestamp with time zone, " +
             "\"ValidTo\" timestamp with time zone, " +
-            "UNIQUE (\"CropCatalogEntryId\", \"Key\"), " +
             "CHECK (\"ValidationStatus\" <> 'Validated' OR (\"NumericValue\" IS NOT NULL AND \"Unit\" IS NOT NULL AND \"SourceName\" IS NOT NULL)), " +
             "CHECK (\"ValidTo\" IS NULL OR \"ValidFrom\" IS NULL OR \"ValidTo\" >= \"ValidFrom\"));\n" +
+            "CREATE INDEX \"IX_agronomic_parameters_CropCatalogEntryId_Key\" ON agro.agronomic_parameters (\"CropCatalogEntryId\", \"Key\");\n" +
             "INSERT INTO agro.crop_catalog (\"Id\", \"Code\", \"DisplayName\", \"SourceName\", \"ValidationStatus\", \"Region\", \"ValidFrom\", \"ValidTo\") VALUES " +
             "('e1000000-0000-4000-8000-000000000001', 'PLATANO', 'Plátano', 'Lista de cultivos del piloto aprobada por el usuario', 'IdentityOnly', NULL, NULL, NULL), " +
             "('e1000000-0000-4000-8000-000000000002', 'YUCA', 'Yuca', 'Lista de cultivos del piloto aprobada por el usuario', 'IdentityOnly', NULL, NULL, NULL), " +

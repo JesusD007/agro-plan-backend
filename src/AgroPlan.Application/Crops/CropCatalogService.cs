@@ -24,7 +24,9 @@ public sealed class CropCatalogService(ICropCatalogRepository repository)
     public static CropCatalogItem ToItem(AgroPlan.Domain.Crops.CropCatalogEntry entry, DateTimeOffset at)
     {
         var usableParameters = entry.Parameters
-            .Where(parameter => parameter.IsUsableAt(at))
+            // Farm and parcel locations are not yet normalized to agronomic zones. A
+            // region-scoped value cannot be treated as applicable without that match.
+            .Where(parameter => parameter.IsUsableAt(at) && parameter.Region is null)
             .Select(parameter => new AgronomicParameterItem(
                 parameter.Key,
                 parameter.NumericValue!.Value,
