@@ -119,6 +119,8 @@ status: complete
 3. **Task 2 RED:** `8b8bfdd` — versioned route and API tests with validated RED evidence.
 4. **Task 2 GREEN:** `0ba690a` — route persistence, review, authorization, and stale lifecycle.
 
+**Plan metadata:** `482820d` (summary, roadmap, requirements, and state), `1912b21` (persist GSD state timestamp).
+
 ## Decisions Made
 
 - No approved geographic provider or validated parcel coordinates are available. The API exposes this as unavailable and does not infer coordinates from the parcel's free-text location.
