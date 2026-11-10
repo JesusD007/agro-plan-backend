@@ -7,6 +7,7 @@ using AgroPlan.Domain.Crops;
 using AgroPlan.Domain.Calendars;
 using AgroPlan.Domain.Logbook;
 using AgroPlan.Infrastructure.Messaging;
+using AgroPlan.Infrastructure.Messaging.Events;
 using AgroPlan.Infrastructure.Persistence;
 using AgroPlan.Worker.Climate;
 using AgroPlan.Worker.Jobs;
@@ -97,6 +98,61 @@ public sealed class OutboxAndConsumerTests(PostgreSqlRabbitFixture services)
             var schedule = await finalDb.CalendarScheduleItems.SingleAsync(x => x.FarmId == farmId && x.CropCycleId == cycleId && x.TaskKey == "irrigation-check");
             Assert.Equal(DateOnly.FromDateTime(DateTime.UtcNow.AddDays(4)), schedule.DueDate);
             Assert.Equal(proposalId, schedule.LastProposalId);
+        }
+        finally { await worker.StopAsync(); }
+    }
+
+    [Fact]
+    public async Task Expired_processing_schedule_proposal_becomes_stale_on_redelivery()
+    {
+        services.EnsureAvailable();
+        await using var factory = new ApiTestFactory(services.ConnectionString, rabbitMqUrl: services.RabbitMqUrl);
+        var ownerId = $"expired-calendar-owner-{Guid.NewGuid():N}";
+        Guid farmId; Guid cycleId; Guid proposalId;
+        var now = DateTimeOffset.UtcNow;
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AgroPlanDbContext>();
+            var (farm, parcelId) = await TestData.SeedFarmAsync(db, ownerId);
+            farmId = farm;
+            var crop = await db.CropCatalogEntries.SingleAsync(item => item.Code == "PLATANO", TestContext.Current.CancellationToken);
+            var cycle = new CropCycle(Guid.NewGuid(), farmId, parcelId, crop, DateOnly.FromDateTime(now.AddDays(-10).UtcDateTime), null, null, now);
+            db.CropCycles.Add(cycle); cycleId = cycle.Id;
+            var proposal = new ScheduleChangeProposal(Guid.NewGuid(), farmId, cycleId, 1, "evidence-v1",
+                [new ScheduleTaskDelta("irrigation-check", null, DateOnly.FromDateTime(now.AddDays(2).UtcDateTime), ["template-v1"])],
+                ["template-v1", "sowing-v1"], now.AddDays(-8), now.AddDays(-1));
+            proposalId = proposal.Id;
+            db.ScheduleChangeProposals.Add(proposal);
+            await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+            await db.ScheduleChangeProposals.Where(x => x.Id == proposalId).ExecuteUpdateAsync(update => update
+                .SetProperty(x => x.Status, ScheduleChangeProposalStatus.Processing)
+                .SetProperty(x => x.ProcessingStartedAt, now.AddMinutes(-6))
+                .SetProperty(x => x.ProcessingAttempts, 1), TestContext.Current.CancellationToken);
+        }
+
+        var eventJson = JsonSerializer.Serialize(new ScheduleChangeRequested(proposalId, 1), new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        await PublishScheduleDuplicateAsync(services.RabbitMqUrl, eventJson);
+        var provider = new CountingAiProvider();
+        using var worker = CreateWorkerHost(services.ConnectionString, services.RabbitMqUrl, provider);
+        await worker.StartAsync();
+        try
+        {
+            var until = DateTimeOffset.UtcNow.AddSeconds(10);
+            ScheduleChangeProposal? stored = null;
+            while (DateTimeOffset.UtcNow < until)
+            {
+                await using var scope = factory.Services.CreateAsyncScope();
+                var db = scope.ServiceProvider.GetRequiredService<AgroPlanDbContext>();
+                stored = await db.ScheduleChangeProposals.AsNoTracking().SingleAsync(x => x.Id == proposalId, TestContext.Current.CancellationToken);
+                if (stored.Status != ScheduleChangeProposalStatus.Processing) break;
+                await Task.Delay(100, TestContext.Current.CancellationToken);
+            }
+
+            Assert.NotNull(stored);
+            Assert.Equal(ScheduleChangeProposalStatus.Stale, stored.Status);
+            Assert.Equal("PROPOSAL_EXPIRED", stored.FailureCode);
+            Assert.Null(stored.ProcessingStartedAt);
+            Assert.Equal(0, provider.CalendarCalls);
         }
         finally { await worker.StopAsync(); }
     }

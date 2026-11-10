@@ -61,6 +61,12 @@ public sealed class ScheduleChangeProposalConsumer(RabbitMqConnection connection
         var now = DateTimeOffset.UtcNow;
         var expiredLease = now - ProcessingLease;
         await db.ScheduleChangeProposals.Where(x => x.Id == message.ProposalId && x.Version == message.Version &&
+                x.Status == ScheduleChangeProposalStatus.Processing && x.ProcessingStartedAt <= expiredLease && x.ExpiresAt <= now)
+            .ExecuteUpdateAsync(update => update.SetProperty(x => x.Status, ScheduleChangeProposalStatus.Stale)
+                .SetProperty(x => x.FailureCode, "PROPOSAL_EXPIRED")
+                .SetProperty(x => x.ProcessingStartedAt, (DateTimeOffset?)null)
+                .SetProperty(x => x.StatusVersion, x => x.StatusVersion + 1), token);
+        await db.ScheduleChangeProposals.Where(x => x.Id == message.ProposalId && x.Version == message.Version &&
                 x.Status == ScheduleChangeProposalStatus.Processing && x.ProcessingStartedAt <= expiredLease &&
                 x.ProcessingAttempts >= MaxProcessingAttempts && x.ExpiresAt > now)
             .ExecuteUpdateAsync(update => update.SetProperty(x => x.Status, ScheduleChangeProposalStatus.Failed)
