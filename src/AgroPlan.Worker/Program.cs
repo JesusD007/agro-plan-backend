@@ -7,6 +7,8 @@ using AgroPlan.Worker.Jobs;
 using AgroPlan.Worker.AI;
 using AgroPlan.Worker.Climate;
 using AgroPlan.Application.Abstractions;
+using AgroPlan.Application.Workforce;
+using AgroPlan.Infrastructure.Calendars;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 
@@ -21,10 +23,14 @@ if (!string.IsNullOrWhiteSpace(rabbitMqUrl))
     builder.Services.AddSingleton<RabbitMqConnection>();
     builder.Services.AddSingleton<IAiProposalProvider, GeminiProposalProvider>();
     builder.Services.AddSingleton<IClimateProvider, UnconfiguredClimateProvider>();
+    builder.Services.AddSingleton<IExternalWorkCalendar, UnconfiguredWorkCalendar>();
+    builder.Services.AddSingleton<WorkTaskImpactProjector>();
     builder.Services.AddHostedService<SowingPlanConsumer>();
     builder.Services.AddHostedService<PlantingFrameConsumer>();
     builder.Services.AddHostedService<ScheduleChangeProposalConsumer>();
     builder.Services.AddHostedService<VerifiedWorkRewardsConsumer>();
+    builder.Services.AddHostedService<ConfirmedRecordTaskImpactConsumer>();
+    builder.Services.AddHostedService<TaskCalendarSyncConsumer>();
 }
 else
 {

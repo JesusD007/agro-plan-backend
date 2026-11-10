@@ -12,6 +12,7 @@ using AgroPlan.Infrastructure.Messaging;
 using AgroPlan.Infrastructure.Storage;
 using AgroPlan.Infrastructure.Climate;
 using AgroPlan.Infrastructure.Routing;
+using AgroPlan.Infrastructure.Calendars;
 using AgroPlan.Infrastructure.Prices;
 using AgroPlan.Application.AdvisoryAccess;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -121,6 +122,7 @@ builder.Services.AddScoped<SubmitPlantingFrameProposal>();
 builder.Services.AddSingleton<IWeatherAdvisoryProvider, UnavailableWeatherAdvisoryProvider>();
 builder.Services.AddSingleton<IReferencePriceProvider, UnavailableReferencePriceProvider>();
 builder.Services.AddSingleton<IWorkRouteProvider, UnconfiguredWorkRouteProvider>();
+builder.Services.AddSingleton<IExternalWorkCalendar, UnconfiguredWorkCalendar>();
 builder.Services.AddScoped<AgroPlan.Application.Planning.PlantingFrameCalculator>();
 builder.Services.AddScoped<ConfirmProposal>();
 builder.Services.AddSingleton<IFileStorage, SupabaseFileStorage>();
@@ -165,6 +167,7 @@ builder.Services.AddOpenApi(options =>
 });
 builder.Services.AddSignalR();
 builder.Services.AddHostedService<JobStatusNotificationService>();
+builder.Services.AddHostedService<TaskScheduleNotificationConsumer>();
 builder.Services.AddHealthChecks();
 
 var app = builder.Build();
