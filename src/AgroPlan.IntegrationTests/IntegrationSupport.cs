@@ -37,38 +37,71 @@ internal static class TestSettings
             .Issue(new ApplicationUser { Id = userId, Email = $"{userId}@example.test" }, DateTimeOffset.UtcNow, roles);
 }
 
-internal sealed class ApiTestFactory(
-    string connectionString,
-    string environment = "Development",
-    string? rabbitMqUrl = null,
-    bool disableBackgroundServices = false) : WebApplicationFactory<AgroApi::Program>
+internal sealed class ApiTestFactory : WebApplicationFactory<AgroApi::Program>
 {
+    private readonly string _connectionString;
+    private readonly string _environment;
+    private readonly string? _rabbitMqUrl;
+    private readonly bool _disableBackgroundServices;
+    private readonly Dictionary<string, string?> _previousEnvironment = new(StringComparer.Ordinal);
+
+    public ApiTestFactory(
+        string connectionString,
+        string environment = "Development",
+        string? rabbitMqUrl = null,
+        bool disableBackgroundServices = false)
+    {
+        _connectionString = connectionString;
+        _environment = environment;
+        _rabbitMqUrl = rabbitMqUrl;
+        _disableBackgroundServices = disableBackgroundServices;
+
+        // Minimal hosting reads its configuration before WebApplicationFactory's
+        // ConfigureAppConfiguration callback runs. Set these early-read values
+        // in the process environment; integration tests are serialized below.
+        SetEnvironmentVariable("ConnectionStrings__AgroPlan", connectionString);
+        SetEnvironmentVariable("Jwt__Issuer", TestSettings.Issuer);
+        SetEnvironmentVariable("Jwt__Audience", ApiIdentity.Audience);
+        SetEnvironmentVariable("Jwt__SigningKey", TestSettings.SigningKey);
+        SetEnvironmentVariable("Recovery__CodeLifetimeMinutes", "15");
+        SetEnvironmentVariable("Recovery__PasswordChangeTokenLifetimeMinutes", "15");
+        SetEnvironmentVariable("RABBITMQ_URL", rabbitMqUrl);
+    }
+
     public RecordingEmailSender Email { get; } = new();
     public RecordingFileStorage Storage { get; } = new();
 
+    protected override void Dispose(bool disposing)
+    {
+        base.Dispose(disposing);
+        if (!disposing) return;
+        foreach (var (name, value) in _previousEnvironment)
+            Environment.SetEnvironmentVariable(name, value);
+    }
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.UseEnvironment(environment);
+        builder.UseEnvironment(_environment);
         builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(
             new Dictionary<string, string?>
             {
-                ["ConnectionStrings:AgroPlan"] = connectionString,
+                ["ConnectionStrings:AgroPlan"] = _connectionString,
                 ["Jwt:Issuer"] = TestSettings.Issuer,
                 ["Jwt:Audience"] = ApiIdentity.Audience,
                 ["Jwt:SigningKey"] = TestSettings.SigningKey,
                 ["Recovery:CodeLifetimeMinutes"] = "15",
                 ["Recovery:PasswordChangeTokenLifetimeMinutes"] = "15",
-                ["RABBITMQ_URL"] = rabbitMqUrl
+                ["RABBITMQ_URL"] = _rabbitMqUrl
             }));
 
         builder.ConfigureTestServices(services =>
         {
-            if (disableBackgroundServices)
+            if (_disableBackgroundServices)
             {
                 var backgroundServices = services.Where(descriptor =>
                     descriptor.ServiceType == typeof(IHostedService) &&
                     descriptor.ImplementationType is { } implementationType &&
-                    (implementationType == typeof(AgroPlan.Api.Services.JobStatusNotificationService) ||
+                    (implementationType == typeof(AgroApi::AgroPlan.Api.Services.JobStatusNotificationService) ||
                      implementationType == typeof(AgroPlan.Infrastructure.Messaging.OutboxPublisher))).ToArray();
                 foreach (var descriptor in backgroundServices)
                     services.Remove(descriptor);
@@ -78,6 +111,13 @@ internal sealed class ApiTestFactory(
             services.RemoveAll<IFileStorage>();
             services.AddSingleton<IFileStorage>(Storage);
         });
+    }
+
+    private void SetEnvironmentVariable(string name, string? value)
+    {
+        if (!_previousEnvironment.ContainsKey(name))
+            _previousEnvironment[name] = Environment.GetEnvironmentVariable(name);
+        Environment.SetEnvironmentVariable(name, value);
     }
 }
 

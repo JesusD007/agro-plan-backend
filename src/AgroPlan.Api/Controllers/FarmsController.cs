@@ -101,11 +101,11 @@ public sealed class FarmsController(AgroPlanDbContext dbContext) : ControllerBas
 }
 
 public sealed record CreateFarmRequest(
-    [property: Required, StringLength(160, MinimumLength = 2)] string Name,
-    [property: StringLength(240)] string? Location);
+    [param: Required, StringLength(160, MinimumLength = 2)] string Name,
+    [param: StringLength(240)] string? Location);
 
 public sealed record UpdateFarmRequest(
-    [property: Required, StringLength(160, MinimumLength = 2)] string Name,
-    [property: StringLength(240)] string? Location);
+    [param: Required, StringLength(160, MinimumLength = 2)] string Name,
+    [param: StringLength(240)] string? Location);
 
 public sealed record FarmResponse(Guid Id, string Name, string? Location, DateTimeOffset CreatedAt);

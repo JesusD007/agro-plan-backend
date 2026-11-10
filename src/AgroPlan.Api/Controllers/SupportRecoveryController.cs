@@ -68,11 +68,11 @@ public sealed class SupportRecoveryController(RecoveryService recoveryService) :
     }
 }
 
-public sealed record RecoveryStartRequest([property: Required, EmailAddress, StringLength(256)] string Email);
-public sealed record RecoveryCodeRequest([property: Required, RegularExpression("^[0-9]{8}$")] string Code);
-public sealed record SupportReviewRequest([property: Required] bool? Approve, [property: StringLength(500)] string? Note);
+public sealed record RecoveryStartRequest([param: Required, EmailAddress, StringLength(256)] string Email);
+public sealed record RecoveryCodeRequest([param: Required, RegularExpression("^[0-9]{8}$")] string Code);
+public sealed record SupportReviewRequest([param: Required] bool? Approve, [param: StringLength(500)] string? Note);
 public sealed record PasswordChangeRequest(
-    [property: Required] Guid RequestId,
-    [property: Required, StringLength(128, MinimumLength = 32)] string Token,
-    [property: Required, StringLength(128, MinimumLength = 12)] string NewPassword);
+    [param: Required] Guid RequestId,
+    [param: Required, StringLength(128, MinimumLength = 32)] string Token,
+    [param: Required, StringLength(128, MinimumLength = 12)] string NewPassword);
 public sealed record RecoveryRequestAccepted(Guid RequestId, string Message);

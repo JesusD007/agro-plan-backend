@@ -44,7 +44,7 @@ public sealed class PlantingFrameConsumer(RabbitMqConnection connection, IServic
 
     private async Task HandleAsync(byte[] body, CancellationToken ct)
     {
-        var message = JsonSerializer.Deserialize<FrameRequested>(body);
+        var message = JsonSerializer.Deserialize<FrameRequested>(body, new JsonSerializerOptions(JsonSerializerDefaults.Web));
         if (message is null || message.JobId == Guid.Empty || message.Version != 1) throw new InvalidOperationException("Invalid planting frame event.");
         await using var scope = scopeFactory.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AgroPlanDbContext>();

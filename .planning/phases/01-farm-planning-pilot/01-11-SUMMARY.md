@@ -26,7 +26,9 @@ key-files:
 decisions:
   - Container-dependent fixtures check Docker first and dynamically skip with a clear reason if no engine responds.
   - API docs-only tests remove hosted background services so they do not depend on PostgreSQL or RabbitMQ.
-  - Keep Nyquist sign-off false until the full suite runs successfully on a Docker-enabled runner.
+  - Test host sets early-read connection/JWT configuration in a serialized process environment and restores original values after disposal.
+  - Two sowing consumers receive duplicate RabbitMQ events to exercise the atomic PostgreSQL claim.
+  - Nyquist sign-off is true after all 22 unit and integration tests pass.
 metrics:
   duration: 2h
   completed: 2026-11-10
@@ -42,22 +44,23 @@ actuals:
 
 # Phase 1 Plan 11: Integration Test Suite Summary
 
-Added eight xUnit v3 HTTP and persistence integration scenarios with PostgreSQL/RabbitMQ Testcontainers fixtures, covering farm authorization and revocation, support-mediated recovery, crop safe mode, immutable logbook corrections, attachment finalization, asynchronous outbox/worker behavior, and Development Scalar/OpenAPI routes.
+Added eight xUnit v3 HTTP and persistence integration scenarios with PostgreSQL/RabbitMQ Testcontainers fixtures, covering farm authorization and revocation, support-mediated recovery, crop safe mode, immutable logbook corrections, attachment finalization, duplicate outbox/worker delivery, and Development Scalar/OpenAPI routes.
 
 ## Completed Tasks
 
 | Task | Result | Commit |
 |---|---|---|
 | 1. Farm-scoped API and documentation tests | Added API test host, fixture support, auth/recovery/crop/doc tests, and solution registration. | `7fdb129` |
-| 2. Immutable history and worker flow tests | Added logbook/attachment/outbox-worker tests; corrected camel-case event deserialization. | `7242705` |
+| 2. Immutable history and worker flow tests | Added logbook/attachment/outbox-worker tests; corrected camel-case sowing/frame event deserialization and covered duplicate delivery to two consumers. | `7242705` plus integration verification fixes |
 | 2a. OpenAPI test host correction | Preserved TestHost services while disabling only API background jobs; bounded the docs request timeout. | `4aca5e7` |
 | 3. Validation matrix | Documented commands, service requirements, coverage, and remaining sign-off gates. | Included in final plan docs commit |
 
 ## Verification
 
-- `dotnet build src/AgroPlan.IntegrationTests/AgroPlan.IntegrationTests.csproj --no-restore -m:1` — passed, 0 errors; emitted 51 xUnit1051 cancellation-token analyzer warnings.
-- `dotnet test ... -m:1` built and launched VSTest, but this runner did not produce a test summary. The Docker Desktop engine pipe was inaccessible (`docker version` returned access denied), and even the filtered OpenAPI-only run stalled before reporting. Test runs were interrupted to avoid a long wait.
-- Docker-dependent tests therefore have no observed pass/skip counts from this environment. Run the documented integration and solution commands on a Docker-enabled runner before declaring validation sign-off.
+- `dotnet build src/AgroPlan.IntegrationTests/AgroPlan.IntegrationTests.csproj --no-restore -m:1` — passed with 0 errors; a clean rebuild reports xUnit1051 cancellation-token analyzer warnings.
+- `dotnet test src/AgroPlan.IntegrationTests/AgroPlan.IntegrationTests.csproj --no-restore -m:1` — 8 passed, 0 failed, 0 skipped with PostgreSQL/RabbitMQ Testcontainers.
+- `dotnet test src/AgroPlan.sln --no-restore -m:1` — 22 passed (14 unit + 8 integration), 0 failed, 0 skipped.
+- Development OpenAPI/Scalar and Production route-absence HTTP checks passed.
 
 ## Deviations from Plan
 
@@ -70,13 +73,15 @@ Added eight xUnit v3 HTTP and persistence integration scenarios with PostgreSQL/
 - **Files modified:** `src/AgroPlan.Worker/Jobs/SowingPlanConsumer.cs`
 - **Commit:** `7242705`
 
-### Deferred Verification
+### Additional Fixes Found by Integration Tests
 
-- Duplicate/concurrent RabbitMQ deliveries and atomic worker claim behavior (WR-01) are not yet covered by an integration assertion.
-- The support-mediated recovery, database trigger, and worker integration cases are implemented but could not be behaviorally verified in this runner.
+- ASP.NET Core 10 rejects MVC record validation metadata targeted only at generated properties; request DTO validation attributes now target primary-constructor parameters.
+- Support recovery audit rows reference the support identity; the integration fixture now seeds that account before approval.
+- The planting-frame consumer now deserializes camel-case outbox payloads using Web JSON defaults.
+- Duplicate delivery integration starts two sowing consumers, republishes one event twice, and asserts that the PostgreSQL status version advances only for the winning claim and completion.
 
 ## Self-Check: PASSED
 
 - All eight `[Fact]` tests and the integration project files are present.
 - Both implementation commits are ancestors of the plan branch head.
-- Nyquist compliance remains false in `01-VALIDATION.md` pending a full green run.
+- Nyquist compliance is true in `01-VALIDATION.md`; all 22 tests pass with containers enabled.

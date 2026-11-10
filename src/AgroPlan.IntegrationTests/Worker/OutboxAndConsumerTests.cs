@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 using AgroPlan.Application.Abstractions;
 using AgroPlan.Domain.Crops;
@@ -12,6 +13,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using RabbitMQ.Client;
 using Xunit;
 
 namespace AgroPlan.IntegrationTests.Worker;
@@ -53,29 +55,31 @@ public sealed class OutboxAndConsumerTests(PostgreSqlRabbitFixture services)
         using var frameJson = JsonDocument.Parse(await frameResponse.Content.ReadAsStringAsync());
         var frameJobId = frameJson.RootElement.GetProperty("id").GetGuid();
 
+        var (sowingPayload, sowingEventType, initialStatusVersion) = await WaitForPublishedSowingOutboxAsync(
+            factory, sowingJobId, TimeSpan.FromSeconds(30));
+        await PublishDuplicateSowingEventAsync(services.RabbitMqUrl, sowingEventType, sowingPayload, 1);
+        await PublishDuplicateSowingEventAsync(services.RabbitMqUrl, sowingEventType, sowingPayload, 2);
+
         var aiProvider = new CountingAiProvider();
         using var worker = CreateWorkerHost(services.ConnectionString, services.RabbitMqUrl, aiProvider);
         await worker.StartAsync();
         try
         {
             var (sowing, frame) = await WaitForCompletionAsync(factory, farmId, sowingJobId, frameJobId, TimeSpan.FromSeconds(30));
-            Assert.Equal("completed", sowing.GetProperty("status").GetString());
-            Assert.Equal("completed", frame.GetProperty("status").GetString());
+            Assert.Equal("insufficient_data", sowing.GetProperty("status").GetString());
+            Assert.Equal("draft", frame.GetProperty("status").GetString());
             Assert.Equal(0, aiProvider.Calls);
 
-            using var sowingResult = JsonDocument.Parse(sowing.GetProperty("resultJson").GetString()!);
-            Assert.Equal("insufficient_data", sowingResult.RootElement.GetProperty("status").GetString());
-            Assert.False(sowingResult.RootElement.GetProperty("confirmationAllowed").GetBoolean());
-            var sowingMissing = sowingResult.RootElement.GetProperty("missingInputs").EnumerateArray()
+            Assert.False(sowing.GetProperty("confirmationAllowed").GetBoolean());
+            var sowingMissing = sowing.GetProperty("missingInputs").EnumerateArray()
                 .Select(item => item.GetString()).ToArray();
             Assert.Contains("parcel.geometry", sowingMissing);
             Assert.Contains("validated.crop.parameters", sowingMissing);
-            Assert.Empty(sowingResult.RootElement.GetProperty("sourceIds").EnumerateArray());
+            Assert.Empty(sowing.GetProperty("sourceIds").EnumerateArray());
 
-            using var frameResult = JsonDocument.Parse(frame.GetProperty("resultJson").GetString()!);
-            Assert.Empty(frameResult.RootElement.GetProperty("options").EnumerateArray());
-            Assert.False(frameResult.RootElement.GetProperty("confirmationAllowed").GetBoolean());
-            var frameMissing = frameResult.RootElement.GetProperty("missingInputs").EnumerateArray()
+            Assert.Empty(frame.GetProperty("options").EnumerateArray());
+            Assert.False(frame.GetProperty("confirmationAllowed").GetBoolean());
+            var frameMissing = frame.GetProperty("missingInputs").EnumerateArray()
                 .Select(item => item.GetString()).ToArray();
             Assert.Contains("parcel.usableAreaSquareMeters", frameMissing);
             Assert.Contains("parcel.aisleGeometry", frameMissing);
@@ -93,6 +97,9 @@ public sealed class OutboxAndConsumerTests(PostgreSqlRabbitFixture services)
                 var outbox = await db.OutboxMessages.Where(item => item.AggregateId == sowingJobId || item.AggregateId == frameJobId).ToListAsync();
                 Assert.Equal(2, outbox.Count);
                 Assert.All(outbox, message => Assert.NotNull(message.PublishedAt));
+                var finalStatusVersion = await db.SowingProposals.Where(item => item.Id == sowingJobId)
+                    .Select(item => item.StatusVersion).SingleAsync();
+                Assert.Equal(initialStatusVersion + 2, finalStatusVersion);
             }
         }
         finally
@@ -114,11 +121,56 @@ public sealed class OutboxAndConsumerTests(PostgreSqlRabbitFixture services)
                 services.AddSingleton<RabbitMqConnection>();
                 services.AddSingleton<IClimateProvider, UnconfiguredClimateProvider>();
                 services.AddSingleton<IAiProposalProvider>(aiProvider);
-                services.AddHostedService<SowingPlanConsumer>();
+                // Two independent consumers force duplicate broker deliveries to race on the DB claim.
+                services.AddSingleton<IHostedService, SowingPlanConsumer>();
+                services.AddSingleton<IHostedService, SowingPlanConsumer>();
                 services.AddHostedService<PlantingFrameConsumer>();
             })
             .ConfigureLogging((_, logging) => logging.SetMinimumLevel(LogLevel.Warning))
             .Build();
+
+    private static async Task<(string Payload, string EventType, long StatusVersion)> WaitForPublishedSowingOutboxAsync(
+        ApiTestFactory factory, Guid sowingJobId, TimeSpan timeout)
+    {
+        var until = DateTimeOffset.UtcNow + timeout;
+        while (DateTimeOffset.UtcNow < until)
+        {
+            await using var scope = factory.Services.CreateAsyncScope();
+            var db = scope.ServiceProvider.GetRequiredService<AgroPlanDbContext>();
+            var message = await db.OutboxMessages.AsNoTracking()
+                .SingleOrDefaultAsync(item => item.AggregateId == sowingJobId, TestContext.Current.CancellationToken);
+            if (message?.PublishedAt is not null)
+            {
+                var statusVersion = await db.SowingProposals.AsNoTracking().Where(item => item.Id == sowingJobId)
+                    .Select(item => item.StatusVersion).SingleAsync(TestContext.Current.CancellationToken);
+                return (message.PayloadJson, message.EventType, statusVersion);
+            }
+            await Task.Delay(100, TestContext.Current.CancellationToken);
+        }
+        throw new TimeoutException("Sowing outbox message was not published before the duplicate-delivery setup timeout.");
+    }
+
+    private static async Task PublishDuplicateSowingEventAsync(
+        string rabbitMqUrl, string eventType, string payload, int duplicateNumber)
+    {
+        var factory = new ConnectionFactory { Uri = new Uri(rabbitMqUrl, UriKind.Absolute) };
+        await using var connection = await factory.CreateConnectionAsync(TestContext.Current.CancellationToken);
+        await using var channel = await connection.CreateChannelAsync(cancellationToken: TestContext.Current.CancellationToken);
+        await RabbitMqPublisher.EnsureQueueAsync(channel, TestContext.Current.CancellationToken);
+        await channel.BasicPublishAsync(
+            exchange: string.Empty,
+            routingKey: RabbitMqPublisher.QueueName,
+            mandatory: true,
+            basicProperties: new BasicProperties
+            {
+                ContentType = "application/json",
+                DeliveryMode = DeliveryModes.Persistent,
+                Type = eventType,
+                MessageId = $"duplicate-{duplicateNumber}-{Guid.NewGuid():N}"
+            },
+            body: Encoding.UTF8.GetBytes(payload),
+            cancellationToken: TestContext.Current.CancellationToken);
+    }
 
     private static async Task<(JsonElement Sowing, JsonElement Frame)> WaitForCompletionAsync(
         ApiTestFactory factory,

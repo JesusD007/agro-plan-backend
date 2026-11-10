@@ -126,5 +126,5 @@ public sealed class LogbookAttachmentsController(AgroPlanDbContext db, IFileStor
     }
 }
 
-public sealed record CreateAttachmentRequest([property: Required] string ContentType, [property: Range(1, 10485760)] long SizeBytes);
+public sealed record CreateAttachmentRequest([param: Required] string ContentType, [param: Range(1, 10485760)] long SizeBytes);
 public sealed record UploadAuthorizationResponse(Guid AttachmentId, string SignedUrl, DateTimeOffset ExpiresAt, string ContentType, long SizeBytes);

@@ -61,10 +61,10 @@ public sealed class LogbookController(AgroPlanDbContext db) : ControllerBase
         x.ActivityType, x.OccurredAt, x.Details, x.ActorUserId, x.CreatedAt, x.CorrectsEntryId, x.CorrectionReason);
 }
 
-public sealed record LogbookEntryRequest([property: Required] Guid ParcelId, Guid? CropCycleId,
-    [property: Required] LogbookActivityType ActivityType, [property: Required] DateTimeOffset OccurredAt,
-    [property: Required, StringLength(4000, MinimumLength = 1)] string Details);
-public sealed record CorrectLogbookEntryRequest([property: Required, StringLength(1000, MinimumLength = 1)] string Reason,
-    [property: Required] DateTimeOffset OccurredAt, [property: Required, StringLength(4000, MinimumLength = 1)] string Details);
+public sealed record LogbookEntryRequest([param: Required] Guid ParcelId, Guid? CropCycleId,
+    [param: Required] LogbookActivityType ActivityType, [param: Required] DateTimeOffset OccurredAt,
+    [param: Required, StringLength(4000, MinimumLength = 1)] string Details);
+public sealed record CorrectLogbookEntryRequest([param: Required, StringLength(1000, MinimumLength = 1)] string Reason,
+    [param: Required] DateTimeOffset OccurredAt, [param: Required, StringLength(4000, MinimumLength = 1)] string Details);
 public sealed record LogbookEntryResponse(Guid Id, Guid FarmId, Guid ParcelId, Guid? CropCycleId, LogbookActivityType ActivityType,
     DateTimeOffset OccurredAt, string Details, string ActorUserId, DateTimeOffset CreatedAt, Guid? CorrectsEntryId, string? CorrectionReason);

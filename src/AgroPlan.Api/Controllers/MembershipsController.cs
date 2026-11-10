@@ -81,4 +81,4 @@ public sealed class MembershipsController(
     private string? CurrentUserId() => User.FindFirstValue("sub") ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
 }
 
-public sealed record GrantAdministratorRequest([property: Required, EmailAddress, StringLength(256)] string Email);
+public sealed record GrantAdministratorRequest([param: Required, EmailAddress, StringLength(256)] string Email);

@@ -62,7 +62,8 @@ public sealed class IdentityAndFarmAuthorizationTests(PostgreSqlFixture postgres
         Assert.Equal(HttpStatusCode.Created, registration.StatusCode);
 
         using var start = await client.PostAsJsonAsync("/api/recovery/requests", new { email });
-        Assert.Equal(HttpStatusCode.Accepted, start.StatusCode);
+        Assert.True(start.StatusCode == HttpStatusCode.Accepted,
+            $"Expected accepted recovery request; got {(int)start.StatusCode}: {await start.Content.ReadAsStringAsync()}");
         var startText = await start.Content.ReadAsStringAsync();
         Assert.DoesNotContain("code", startText, StringComparison.OrdinalIgnoreCase);
         using var startJson = JsonDocument.Parse(startText);
@@ -74,7 +75,22 @@ public sealed class IdentityAndFarmAuthorizationTests(PostgreSqlFixture postgres
         using var verification = await client.PostAsJsonAsync($"/api/recovery/requests/{requestId}/verify", new { code });
         Assert.Equal(HttpStatusCode.Accepted, verification.StatusCode);
 
-        TestData.SetBearer(client, $"support-{Guid.NewGuid():N}", SupportRole.Name);
+        var supportUserId = $"support-{Guid.NewGuid():N}";
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AgroPlan.Infrastructure.Persistence.AgroPlanDbContext>();
+            db.Users.Add(new ApplicationUser
+            {
+                Id = supportUserId,
+                UserName = $"{supportUserId}@example.test",
+                NormalizedUserName = $"{supportUserId}@EXAMPLE.TEST",
+                Email = $"{supportUserId}@example.test",
+                NormalizedEmail = $"{supportUserId}@EXAMPLE.TEST",
+                EmailConfirmed = true
+            });
+            await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+        TestData.SetBearer(client, supportUserId, SupportRole.Name);
         using var pending = await client.GetAsync("/api/recovery/support/pending");
         Assert.Equal(HttpStatusCode.OK, pending.StatusCode);
         Assert.Contains(email, await pending.Content.ReadAsStringAsync(), StringComparison.OrdinalIgnoreCase);
@@ -84,7 +100,8 @@ public sealed class IdentityAndFarmAuthorizationTests(PostgreSqlFixture postgres
             approve = true,
             note = "Identity checked by integration test"
         });
-        Assert.Equal(HttpStatusCode.NoContent, review.StatusCode);
+        Assert.True(review.StatusCode == HttpStatusCode.NoContent,
+            $"Expected support review to complete; got {(int)review.StatusCode}: {await review.Content.ReadAsStringAsync()}");
         var resetEmail = Assert.Single(factory.Email.Messages.Skip(1));
         const string tokenMarker = "one-time password change token within 15 minutes: ";
         var tokenStart = resetEmail.TextBody.IndexOf(tokenMarker, StringComparison.Ordinal) + tokenMarker.Length;

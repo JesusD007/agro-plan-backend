@@ -112,8 +112,8 @@ public sealed class ParcelsController(AgroPlanDbContext dbContext) : ControllerB
 }
 
 public sealed record ParcelRequest(
-    [property: Required, StringLength(160, MinimumLength = 2)] string Name,
-    [property: StringLength(240)] string? Location,
-    [property: Range(typeof(decimal), "0.0001", "1000000")] decimal AreaHectares);
+    [param: Required, StringLength(160, MinimumLength = 2)] string Name,
+    [param: StringLength(240)] string? Location,
+    [param: Range(typeof(decimal), "0.0001", "1000000")] decimal AreaHectares);
 
 public sealed record ParcelResponse(Guid Id, Guid FarmId, string Name, string? Location, decimal AreaHectares, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);

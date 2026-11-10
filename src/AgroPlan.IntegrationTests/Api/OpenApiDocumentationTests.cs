@@ -26,7 +26,7 @@ public sealed class OpenApiDocumentationTests
         Assert.Contains(paths.EnumerateObject(), item => item.Name.Contains("/api/identity/register", StringComparison.Ordinal));
         Assert.True(root.GetProperty("components").GetProperty("securitySchemes").TryGetProperty("Bearer", out _));
 
-        using var scalarResponse = await client.GetAsync("/scalar");
+        using var scalarResponse = await client.GetAsync("/scalar/");
         Assert.Equal(HttpStatusCode.OK, scalarResponse.StatusCode);
         Assert.Contains("Scalar", await scalarResponse.Content.ReadAsStringAsync(), StringComparison.OrdinalIgnoreCase);
     }

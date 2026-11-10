@@ -156,7 +156,7 @@ public sealed class PlanningJobsController(
         proposal.FailureSummary, proposal.ResultJson, proposal.CreatedAt, proposal.UpdatedAt, proposal.SelectedFrameworkId);
 }
 
-public sealed record SubmitSowingPlanRequest([property: Required] Guid CropCycleId);
+public sealed record SubmitSowingPlanRequest([param: Required] Guid CropCycleId);
 
 public sealed record SowingJobResponse(
     Guid Id,
@@ -169,7 +169,7 @@ public sealed record SowingJobResponse(
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt);
 
-public sealed record SubmitPlantingFrameRequest([property: Required] Guid CropCycleId);
-public sealed record ConfirmPlantingFrameRequest([property: Required] Guid FrameworkId);
+public sealed record SubmitPlantingFrameRequest([param: Required] Guid CropCycleId);
+public sealed record ConfirmPlantingFrameRequest([param: Required] Guid FrameworkId);
 public sealed record PlantingFrameJobResponse(Guid Id, Guid FarmId, Guid CropCycleId, string Status,
     string? FailureCode, string? FailureSummary, string? ResultJson, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, Guid? SelectedFrameworkId);

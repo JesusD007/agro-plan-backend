@@ -112,11 +112,11 @@ public sealed class CropCyclesController(AgroPlanDbContext dbContext, CropCatalo
 }
 
 public sealed record CropCycleRequest(
-    [property: Required] Guid ParcelId,
-    [property: Required, StringLength(40, MinimumLength = 2)] string CropCode,
+    [param: Required] Guid ParcelId,
+    [param: Required, StringLength(40, MinimumLength = 2)] string CropCode,
     DateOnly? DesiredPlantingDate,
-    [property: StringLength(120)] string? Variety,
-    [property: StringLength(2000)] string? Notes);
+    [param: StringLength(120)] string? Variety,
+    [param: StringLength(2000)] string? Notes);
 
 public sealed record CropCycleResponse(
     Guid Id,
