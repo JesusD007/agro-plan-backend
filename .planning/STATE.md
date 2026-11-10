@@ -3,15 +3,15 @@ gsd_state_version: "1.0"
 current_phase: 2
 current_phase_name: Farm Operations and Safety
 status: executing
-stopped_at: Completed 02-06-PLAN.md
-last_updated: "2026-11-10T15:25:31.147Z"
+stopped_at: Completed 02-07-PLAN.md
+last_updated: "2026-11-10T15:40:42.972Z"
 last_activity: 2026-11-10
-state_head: 50fb9f39d480427c9c9080c8367a2bc05a4bc0b6
+state_head: 612553643f0060b342d7afcabd43b4466c1c6c7f
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 20
-  completed_plans: 18
+  completed_plans: 19
   percent: 17
 last_activity_desc: Phase 2 execution started
 ---
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-11-09)
 ## Current Position
 
 Phase: 2 (Farm Operations and Safety) — EXECUTING
-Plan: 7 of 8
+Plan: 8 of 8
 Status: Ready to execute
 Last activity: 2026-11-10
 
@@ -59,6 +59,7 @@ Progress: ████████░░ [██░░░░░░░░] 17%
 | Phase 2 P04 | 23m | 2 tasks | 10 files |
 | Phase 02 P05 | 35m | 2 tasks | 8 files |
 | Phase 02 P06 | 16m | 2 tasks | 7 files |
+| Phase 2 P7 | 20min | 2 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -86,6 +87,7 @@ Progress: ████████░░ [██░░░░░░░░] 17%
 - [Phase 2]: Validated label evidence and harvest records are immutable; changes append linked versions.
 - [Phase 02]: Calendar estimates require a confirmed sowing date and a current validated crop template.
 - [Phase 02]: Estimated harvest windows are informational and do not bypass exact validated PHI eligibility.
+- [Phase 2]: Advisor grants are separate, read-only, limited to explicit report scopes and a maximum 90-day interval, and checked against PostgreSQL for every request.
 
 ### Pending Todos
 
@@ -104,6 +106,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-10T15:25:30.676Z
-Stopped at: Completed 02-06-PLAN.md
+Last session: 2026-11-10T15:40:42.484Z
+Stopped at: Completed 02-07-PLAN.md
 Resume file: None
