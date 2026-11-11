@@ -8,6 +8,7 @@ using AgroPlan.Infrastructure.Persistence;
 using AgroPlan.Worker.Jobs;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
@@ -158,6 +159,28 @@ public sealed class WeeklySummaryConsumerTests(PostgreSqlFixture postgres)
             new JsonSerializerOptions(JsonSerializerDefaults.Web))!.Sources);
     }
 
+    [Fact]
+    public async Task Provider_failure_logs_only_exception_type_and_never_provider_payload_or_record_identifiers()
+    {
+        postgres.EnsureAvailable();
+        await using var factory = new ApiTestFactory(postgres.ConnectionString, disableBackgroundServices: true);
+        var owner = $"weekly-summary-private-{Guid.NewGuid():N}";
+        var fixture = await SeedPendingSummaryAsync(factory, owner, 1);
+        var marker = $"private-provider-payload-{Guid.NewGuid():N}";
+        var provider = new CapturingNarrativeProvider((_, _) => throw new InvalidOperationException(marker));
+        var logger = new CapturingLogger<WeeklySummaryConsumer>();
+        var consumer = new WeeklySummaryConsumer(factory.Services.GetRequiredService<RabbitMqConnection>(),
+            factory.Services.GetRequiredService<IServiceScopeFactory>(), provider, logger);
+
+        await consumer.ProcessMessageAsync(fixture.EventId, fixture.Body, TestContext.Current.CancellationToken);
+
+        var logs = string.Join("\n", logger.Messages);
+        Assert.Contains(nameof(InvalidOperationException), logs, StringComparison.Ordinal);
+        Assert.DoesNotContain(marker, logs, StringComparison.Ordinal);
+        Assert.DoesNotContain(owner, logs, StringComparison.Ordinal);
+        Assert.DoesNotContain(fixture.FarmId.ToString(), logs, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static WeeklySummaryConsumer CreateConsumer(ApiTestFactory factory, IWeeklySummaryNarrativeProvider provider) =>
         new(factory.Services.GetRequiredService<RabbitMqConnection>(), factory.Services.GetRequiredService<IServiceScopeFactory>(),
             provider, NullLogger<WeeklySummaryConsumer>.Instance);
@@ -191,12 +214,12 @@ public sealed class WeeklySummaryConsumerTests(PostgreSqlFixture postgres)
             db.OutboxMessages.Add(new OutboxMessage(eventId, summaryId, "weekly-summary.narrative.requested", JsonSerializer.Serialize(request, json), now));
             await db.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
-        return new PendingSummaryFixture(summaryId, eventId, requester,
+        return new PendingSummaryFixture(summaryId, eventId, requester, farmId,
             JsonSerializer.SerializeToUtf8Bytes(new WeeklySummaryNarrativeRequested(eventId, farmId, summaryId, requester, 2),
                 new JsonSerializerOptions(JsonSerializerDefaults.Web)));
     }
 
-    private sealed record PendingSummaryFixture(Guid SummaryId, Guid EventId, string RequestedByUserId, byte[] Body);
+    private sealed record PendingSummaryFixture(Guid SummaryId, Guid EventId, string RequestedByUserId, Guid FarmId, byte[] Body);
 
     private sealed class CapturingNarrativeProvider(Func<WeeklySummaryNarrativeInput, CancellationToken, Task<WeeklySummaryNarrativeDraft>> generate)
         : IWeeklySummaryNarrativeProvider
@@ -207,5 +230,14 @@ public sealed class WeeklySummaryConsumerTests(PostgreSqlFixture postgres)
             LastInput = input;
             return generate(input, cancellationToken);
         }
+    }
+
+    private sealed class CapturingLogger<T> : ILogger<T>
+    {
+        public List<string> Messages { get; } = [];
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+        public bool IsEnabled(LogLevel logLevel) => true;
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
+            Func<TState, Exception?, string> formatter) => Messages.Add(formatter(state, exception));
     }
 }

@@ -53,7 +53,7 @@ public sealed class AppliedFarmIntelligenceWorkerActivationTests
     }
 
     [Fact]
-    public void Enabling_summary_hosts_only_its_own_explicitly_registered_provider()
+    public void Enabling_summary_requires_operation_specific_provider_approval_and_hosts_only_its_own_consumer()
     {
         var services = new ServiceCollection();
         services.AddSingleton<IWeeklySummaryNarrativeProvider, FakeWeeklySummaryNarrativeProvider>();
@@ -63,6 +63,11 @@ public sealed class AppliedFarmIntelligenceWorkerActivationTests
         });
 
         InvokeRegistration(services, configuration, "Production");
+        AssertNotHosted<WeeklySummaryConsumer>(services);
+
+        services = new ServiceCollection();
+        services.AddSingleton<IWeeklySummaryNarrativeProvider, FakeWeeklySummaryNarrativeProvider>();
+        InvokeRegistration(services, Configuration(ApprovedProviderConfiguration("WeeklySummary", "narrative")), "Production");
 
         AssertHosted<WeeklySummaryConsumer>(services);
         AssertNotHosted<VoiceDraftConsumer>(services);
@@ -70,20 +75,24 @@ public sealed class AppliedFarmIntelligenceWorkerActivationTests
     }
 
     [Fact]
-    public void Enabling_symptom_observation_hosts_only_its_own_provider_and_requires_private_storage()
+    public void Enabling_symptom_observation_requires_operation_specific_approval_and_private_storage()
     {
         var services = new ServiceCollection();
         services.AddSingleton<ISymptomObservationProvider, FakeSymptomObservationProvider>();
         var configuration = Configuration(new Dictionary<string, string?>
-        {
-            ["AppliedFarmIntelligence:SymptomObservation:Enabled"] = "true"
-        });
+            { ["AppliedFarmIntelligence:SymptomObservation:Enabled"] = "true" });
 
         InvokeRegistration(services, configuration, "Production");
         AssertNotHosted<SymptomObservationConsumer>(services);
 
         services.AddSingleton<IFileStorage>(_ => throw new InvalidOperationException("Storage must not be resolved by registration."));
         InvokeRegistration(services, configuration, "Production");
+        AssertNotHosted<SymptomObservationConsumer>(services);
+
+        services = new ServiceCollection();
+        services.AddSingleton<ISymptomObservationProvider, FakeSymptomObservationProvider>();
+        services.AddSingleton<IFileStorage>(_ => throw new InvalidOperationException("Storage must not be resolved by registration."));
+        InvokeRegistration(services, Configuration(ApprovedProviderConfiguration("SymptomObservation", "observation")), "Production");
 
         AssertHosted<SymptomObservationConsumer>(services);
         AssertNotHosted<VoiceDraftConsumer>(services);
@@ -158,6 +167,14 @@ public sealed class AppliedFarmIntelligenceWorkerActivationTests
         ["AppliedFarmIntelligence:Speech:CodeSwitchConsentedRecordingCount"] = "5",
         ["AppliedFarmIntelligence:Speech:DominicanSpanishFieldExactAccuracy"] = "0.95",
         ["AppliedFarmIntelligence:Speech:HaitianCreoleFieldExactAccuracy"] = "0.95"
+    };
+
+    private static Dictionary<string, string?> ApprovedProviderConfiguration(string feature, string operation) => new()
+    {
+        [$"AppliedFarmIntelligence:{feature}:Enabled"] = "true",
+        [$"AppliedFarmIntelligence:{feature}:Provider"] = $"approved-{operation}-provider",
+        [$"AppliedFarmIntelligence:{feature}:VerifiedOperation"] = operation,
+        [$"AppliedFarmIntelligence:{feature}:EvidenceApproved"] = "true"
     };
 
     private static void AssertNoPhaseFourConsumers(IServiceCollection services)

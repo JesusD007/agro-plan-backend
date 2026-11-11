@@ -1,0 +1,15 @@
+{
+  "command": "dotnet test src/AgroPlan.IntegrationTests/AgroPlan.IntegrationTests.csproj --no-restore --filter 'FullyQualifiedName~AppliedFarmIntelligenceWorkerActivationTests.Enabling_summary_requires_operation_specific_provider_approval_and_hosts_only_its_own_consumer|FullyQualifiedName~AppliedFarmIntelligenceWorkerActivationTests.Enabling_symptom_observation_requires_operation_specific_approval_and_private_storage' --logger 'trx;LogFileName=phase4-provider-approval-red.trx' -m:1 -nr:false",
+  "exitCode": 1,
+  "targetTest": "AgroPlan.IntegrationTests.Worker.AppliedFarmIntelligenceWorkerActivationTests#Enabling_summary_requires_operation_specific_provider_approval_and_hosts_only_its_own_consumer",
+  "targetFile": "src/AgroPlan.IntegrationTests/Worker/AppliedFarmIntelligenceWorkerActivationTests.cs",
+  "expected": "Providers cannot activate weekly summary or symptom consumers without an explicitly selected, operation-matched provider and approved evidence.",
+  "actual": "Both tests failed because the consumers were hosted when approval configuration was absent.",
+  "semanticAssessment": "Intentional RED: both target tests were discovered and executed; their assertions exposed provider registrations that were not gated by operation-specific approval.",
+  "output": "<?xml version=\"1.0\" encoding=\"utf-8\"?><testsuites tests=\"2\" failures=\"2\" errors=\"0\" skipped=\"0\"><testsuite name=\"AgroPlan.IntegrationTests.Worker.AppliedFarmIntelligenceWorkerActivationTests\" tests=\"2\" failures=\"2\" errors=\"0\" skipped=\"0\"><testcase classname=\"AgroPlan.IntegrationTests.Worker.AppliedFarmIntelligenceWorkerActivationTests\" name=\"Enabling_summary_requires_operation_specific_provider_approval_and_hosts_only_its_own_consumer\"><failure message=\"Failed: expected no WeeklySummaryConsumer hosted when provider approval configuration is absent\"/></testcase><testcase classname=\"AgroPlan.IntegrationTests.Worker.AppliedFarmIntelligenceWorkerActivationTests\" name=\"Enabling_symptom_observation_requires_operation_specific_approval_and_private_storage\"><failure message=\"Failed: expected no SymptomObservationConsumer hosted when provider approval configuration is absent\"/></testcase></testsuite></testsuites>",
+  "reportPath": "C:\\Users\\romer\\Lgsus\\Proyecto Agro\\agro-plan-backend\\src\\AgroPlan.IntegrationTests\\TestResults\\phase4-provider-approval-red.trx",
+  "reportModifiedAt": "2026-11-11T16:36:46.6663340Z",
+  "runStartedAt": "2026-11-11T16:36:45.2661799-04:00",
+  "parserAdapter": "C:\\Users\\romer\\Lgsus\\Proyecto Agro\\agro-plan-backend\\.planning\\debug\\phase4-provider-approval-red.junit.xml",
+  "sourceReport": "C:\\Users\\romer\\Lgsus\\Proyecto Agro\\agro-plan-backend\\src\\AgroPlan.IntegrationTests\\TestResults\\phase4-provider-approval-red.trx"
+}
