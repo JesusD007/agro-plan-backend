@@ -31,6 +31,8 @@ if (!string.IsNullOrWhiteSpace(rabbitMqUrl))
     builder.Services.AddHostedService<VerifiedWorkRewardsConsumer>();
     builder.Services.AddHostedService<ConfirmedRecordTaskImpactConsumer>();
     builder.Services.AddHostedService<TaskCalendarSyncConsumer>();
+    if (builder.Services.Any(descriptor => descriptor.ServiceType == typeof(IWeeklySummaryNarrativeProvider)))
+        builder.Services.AddHostedService<WeeklySummaryConsumer>();
 }
 else
 {

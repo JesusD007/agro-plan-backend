@@ -14,6 +14,7 @@ public sealed class RabbitMqPublisher(RabbitMqConnection connection)
     public const string TaskCalendarQueueName = "agroplan.task-calendar-sync.v1";
     public const string TaskScheduleNotificationsQueueName = "agroplan.task-schedule-notifications.v1";
     public const string VoiceDraftsQueueName = "agroplan.voice-drafts.v1";
+    public const string WeeklySummaryNarrativesQueueName = "agroplan.weekly-summary-narratives.v1";
 
     public async Task PublishAsync(OutboxMessage message, CancellationToken cancellationToken)
     {
@@ -31,6 +32,7 @@ public sealed class RabbitMqPublisher(RabbitMqConnection connection)
             "task-calendar.sync" => TaskCalendarQueueName,
             "task-schedule.changed" => TaskScheduleNotificationsQueueName,
             "voice-draft.requested" => VoiceDraftsQueueName,
+            "weekly-summary.narrative.requested" => WeeklySummaryNarrativesQueueName,
             _ => QueueName
         };
         await channel.QueueDeclareAsync(queueName, durable: true, exclusive: false, autoDelete: false, arguments: null, cancellationToken: cancellationToken);
