@@ -175,7 +175,7 @@ request -> authenticate current farm membership -> resolve farm time zone
         -> owner/admin reviews -> re-check advisor grant on share and read
 ```
 
-Use half-open time intervals and convert boundaries to instants once; do not compute “last seven days” or assume the server time zone. Exact DST and invalid-zone behavior is not specified by the user and should be chosen in planning with explicit tests. [ASSUMED]
+Use half-open time intervals and convert boundaries to instants once; the locked product rule remains Monday through Sunday in the farm's configured timezone. Do not compute “last seven days” or assume the server time zone. The timezone identifier mapping and invalid-zone handling are implementation details to confirm against existing farm configuration, not open product decisions. [VERIFIED: .planning/phases/04-applied-farm-intelligence/04-CONTEXT.md, D-05] [ASSUMED]
 
 ### Pattern 3: Observation-only symptom report and human review
 
@@ -216,7 +216,7 @@ Store private photos with report/job metadata, invoke a provider-neutral image-o
 ### Pitfall 2: Media deletion and provider retention drift apart
 **What goes wrong:** AgroPlan deletes an object while an uploaded provider copy remains, or an object deletion failure is hidden while the report appears closed.  
 **Why it happens:** Storage and AI-provider media have separate IDs, lifetimes and deletion APIs. Phase AI design notes Gemini Files temporary retention as separate from app retention.  
-**How to avoid:** Track app object ID and provider upload ID only as needed; schedule deletion on confirmation/closure and a seven-day audio deadline; retry failures, expose cleanup status internally, and audit that media bytes are not retained in backups/log payloads beyond declared policy.  
+**How to avoid:** Track app object ID and provider upload ID only as needed; delete audio on confirmation or seven days after processing if unreviewed, and delete report photos on close/rejection while retaining the report; retry failures and avoid media bytes in logs. These are the locked application-retention rules.  
 **Warning signs:** No deletion outbox, no idempotent delete consumer, or no test that report remains after source media is gone. [VERIFIED: .planning/phases/04-applied-farm-intelligence/04-AI-SPEC.md, section 3; see user retention decision]
 
 ### Pitfall 3: Authorization checked only when work was queued
@@ -276,31 +276,33 @@ Treat this as implementation guidance; confirm timezone storage format and inval
 | # | Claim | Section | Risk if Wrong |
 |---|-------|---------|---------------|
 | A1 | Existing storage supports a server-side deletion operation suitable for retries. | Standard Stack / pitfalls | Could require a storage contract extension or provider-specific implementation. |
-| A2 | Farm timezone already exists or can be added without an upstream data migration dependency. | Summary pattern | Without a trustworthy timezone, local-week boundaries cannot be correct. |
+| A2 | The existing farm configuration can supply the timezone, or an implementation change can persist it. | Summary pattern | The locked Monday–Sunday farm-local rule requires a trustworthy configured timezone. |
 | A3 | Current provider-neutral pattern can be extended into separate speech and image-observation contracts without changing existing proposal contracts. | Stack | Could require a shared abstraction refactor. |
 | A4 | Production speech can be gated by configuration/feature flag while tests use provider fakes. | Pattern 1 | If no flag exists, a safe rollout mechanism must be designed. |
 | A5 | A project-approved threshold for Creole and Dominican field audio quality has not yet been defined. | Pitfall 1 | No objective activation decision can be made without an acceptance threshold and labeled data. |
-| A6 | The exact time-zone identifier format, daylight-saving policy, summary freshness/versioning, media size cap, and image count/format limits are not settled in the context. | Patterns | Affects API validation, migrations, projection consistency and storage cost. |
+| A6 | The exact time-zone identifier mapping, invalid-zone handling, summary freshness/versioning, byte-size media caps, and image count/format limits are implementation details not specified in the context. The five-minute audio duration and media deletion conditions are already locked. | Patterns | Affects API validation, migrations, projection consistency and storage cost; does not change the locked product rules. |
 | A7 | Provider data processing, deployment region, paid-service terms, and lawful basis/notice for worker audio and farm photos require project-owner/privacy review before production media is sent. | Pitfalls | Incorrect vendor/consent posture can expose sensitive personal or farm data. |
 
 ## Open Questions
+
+Only question 1 is a production activation gate. Questions 2–4 are implementation details for planning and do not reopen the locked five-minute voice duration, Monday–Sunday farm-local calendar, or photo/audio deletion conditions.
 
 1. **Which speech provider and production configuration pass the language gate?**
    - What we know: User selected a neutral contract and explicitly requires validation before activation; the phase context requires Dominican Spanish and Haitian Creole.
    - What's unclear: Supported language/locale for the exact transcription operation, dialect/code-switch quality, deployment region, data use, price and operational SLA.
    - Recommendation: Keep the provider unselected in code configuration until provider comparison and bilingual, human-labeled field-audio evaluation are approved. This is the principal production activation gate.
-2. **What timezone identifier is persisted per farm?**
+2. **Which timezone identifier mapping and invalid-zone behavior fit the existing farm configuration? (Implementation detail; Monday–Sunday in farm-local time is locked.)**
    - What we know: Weekly calendar is farm-local Monday–Sunday.
    - What's unclear: IANA vs Windows IDs and how the existing model handles DST/invalid IDs.
-   - Recommendation: Inspect farm configuration and standardize an explicit mapping at planning; test DST boundaries and invalid/missing values.
-3. **What is the lifecycle policy when authorization changes during asynchronous processing?**
+   - Recommendation: Inspect farm configuration and standardize an explicit mapping at planning; test DST boundaries and invalid/missing values. This does not reopen the calendar-week decision.
+3. **What is the lifecycle policy when authorization changes during asynchronous processing? (Implementation detail; per-request authorization is locked.)**
    - What we know: API checks membership for every request, and advisors/agronomists need current scoped authority.
    - What's unclear: Whether an already queued result is discarded or retained privately after worker assignment/grant revocation.
    - Recommendation: Re-check before any user-visible read/write; define queued-job cancellation/discard behavior and avoid provider requests if authority is no longer valid.
-4. **What limits apply to images, audio bytes and summary projection size?**
-   - What we know: Voice duration cap is five minutes; media must remain private and deletion is mandatory.
+4. **What byte/image-count and summary projection limits should complement the locked five-minute audio duration cap? (Implementation detail.)**
+   - What we know: Voice recordings are capped at five minutes; audio and symptom-photo deletion conditions are already fixed in D-04 and D-10; media remains private.
    - What's unclear: Byte, image-count, dimension, request-rate and summary source caps.
-   - Recommendation: Specify server-side limits and partial/unavailable behavior before implementation; do not silently truncate source evidence.
+   - Recommendation: Specify server-side byte/count limits and partial/unavailable behavior before implementation; do not silently truncate source evidence. This is not an open decision about audio duration or deletion timing.
 
 ## Environment Availability
 
