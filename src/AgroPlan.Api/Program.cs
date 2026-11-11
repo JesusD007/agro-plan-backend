@@ -14,6 +14,7 @@ using AgroPlan.Infrastructure.Climate;
 using AgroPlan.Infrastructure.Routing;
 using AgroPlan.Infrastructure.Calendars;
 using AgroPlan.Infrastructure.Prices;
+using AgroPlan.Infrastructure.AI;
 using AgroPlan.Application.AdvisoryAccess;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authentication;
@@ -127,6 +128,8 @@ builder.Services.AddSingleton<IExternalWorkCalendar, UnconfiguredWorkCalendar>()
 builder.Services.AddScoped<AgroPlan.Application.Planning.PlantingFrameCalculator>();
 builder.Services.AddScoped<ConfirmProposal>();
 builder.Services.AddSingleton<IFileStorage, SupabaseFileStorage>();
+builder.Services.AddSingleton<IAppliedFarmIntelligenceActivation>(
+    new ConfigurationAppliedFarmIntelligenceActivation(builder.Configuration));
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;

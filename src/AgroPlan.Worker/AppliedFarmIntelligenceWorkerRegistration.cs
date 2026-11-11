@@ -1,6 +1,7 @@
 using AgroPlan.Application.Abstractions;
 using AgroPlan.Worker.AI;
 using AgroPlan.Worker.Jobs;
+using AgroPlan.Infrastructure.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -18,6 +19,8 @@ public static class AppliedFarmIntelligenceWorkerRegistration
         var isDevelopmentOrTest = string.Equals(environmentName, "Development", StringComparison.OrdinalIgnoreCase) ||
                                  string.Equals(environmentName, "Test", StringComparison.OrdinalIgnoreCase) ||
                                  string.Equals(environmentName, "Testing", StringComparison.OrdinalIgnoreCase);
+        var activation = new ConfigurationAppliedFarmIntelligenceActivation(configuration);
+        services.TryAddSingleton<IAppliedFarmIntelligenceActivation>(activation);
 
         var hasSpeechProvider = HasExplicitProvider<ISpeechTranscriptionProvider>(services,
             typeof(UnconfiguredSpeechTranscriptionProvider));
@@ -37,13 +40,11 @@ public static class AppliedFarmIntelligenceWorkerRegistration
             hasSpeechProvider && HasService<IFileStorage>(services) && IsSpeechEvidenceApproved(configuration))
             services.TryAddEnumerable(ServiceDescriptor.Singleton<Microsoft.Extensions.Hosting.IHostedService, VoiceDraftConsumer>());
 
-        if (configuration.GetValue<bool>("AppliedFarmIntelligence:WeeklySummary:Enabled") && hasSummaryProvider &&
-            IsOperationApproved(configuration, "WeeklySummary", "narrative"))
+        if (activation.IsEnabled(AppliedFarmIntelligenceOperation.WeeklySummaryNarrative) && hasSummaryProvider)
             services.TryAddEnumerable(ServiceDescriptor.Singleton<Microsoft.Extensions.Hosting.IHostedService, WeeklySummaryConsumer>());
 
-        if (configuration.GetValue<bool>("AppliedFarmIntelligence:SymptomObservation:Enabled") &&
-            hasSymptomProvider && HasService<IFileStorage>(services) &&
-            IsOperationApproved(configuration, "SymptomObservation", "observation"))
+        if (activation.IsEnabled(AppliedFarmIntelligenceOperation.SymptomObservation) &&
+            hasSymptomProvider && HasService<IFileStorage>(services))
             services.TryAddEnumerable(ServiceDescriptor.Singleton<Microsoft.Extensions.Hosting.IHostedService, SymptomObservationConsumer>());
 
         return services;
@@ -69,14 +70,6 @@ public static class AppliedFarmIntelligenceWorkerRegistration
                section.GetValue<int>("CodeSwitchConsentedRecordingCount") >= 1 &&
                section.GetValue<double>("DominicanSpanishFieldExactAccuracy") >= 0.95 &&
                section.GetValue<double>("HaitianCreoleFieldExactAccuracy") >= 0.95;
-    }
-
-    private static bool IsOperationApproved(IConfiguration configuration, string feature, string operation)
-    {
-        var section = configuration.GetSection($"AppliedFarmIntelligence:{feature}");
-        return !string.IsNullOrWhiteSpace(section["Provider"]) &&
-               string.Equals(section["VerifiedOperation"], operation, StringComparison.Ordinal) &&
-               section.GetValue<bool>("EvidenceApproved");
     }
 
     private static bool HasExplicitProvider<TProvider>(IServiceCollection services, Type unconfiguredType)

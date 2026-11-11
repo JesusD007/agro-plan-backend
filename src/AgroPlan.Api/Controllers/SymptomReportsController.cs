@@ -17,7 +17,7 @@ namespace AgroPlan.Api.Controllers;
 [Authorize]
 [Route("api/farms/{farmId:guid}/symptom-reports")]
 public sealed class SymptomReportsController(AgroPlanDbContext db, IFileStorage storage,
-    IFarmAuthorization authorization, IServiceProvider services) : ControllerBase
+    IFarmAuthorization authorization, IAppliedFarmIntelligenceActivation activation) : ControllerBase
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private static readonly HashSet<string> Types = ["image/jpeg", "image/png", "image/webp"];
@@ -113,7 +113,7 @@ public sealed class SymptomReportsController(AgroPlanDbContext db, IFileStorage 
         if (role is not (FarmRole.Owner or FarmRole.Administrator or FarmRole.Worker)) return Forbid();
         report.Submit(now);
         if (report.Photos.Any(x => x.ConsentGranted && !x.ConsentRevokedAt.HasValue) &&
-            services.GetService<ISymptomObservationProvider>() is not null)
+            activation.IsEnabled(AppliedFarmIntelligenceOperation.SymptomObservation))
         {
             var id = Guid.NewGuid();
             var payload = JsonSerializer.Serialize(new SymptomObservationRequested(id, farmId, report.Id, report.Version), JsonOptions);

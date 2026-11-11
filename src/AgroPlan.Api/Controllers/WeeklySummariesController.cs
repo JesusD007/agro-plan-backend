@@ -23,7 +23,7 @@ namespace AgroPlan.Api.Controllers;
 [Authorize]
 [EnableRateLimiting("phase4-summary")]
 public sealed class WeeklySummariesController(AgroPlanDbContext db, IFarmAuthorization farmAuthorization,
-    IServiceProvider services) : ControllerBase
+    IAppliedFarmIntelligenceActivation activation) : ControllerBase
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
@@ -110,7 +110,7 @@ public sealed class WeeklySummariesController(AgroPlanDbContext db, IFarmAuthori
         var summary = new WeeklySummary(Guid.NewGuid(), farmId, userId, request.WeekAnchorDate,
             projection.WeekStartDate, projection.WeekEndDate, request.CropCycleId, projection.TimeZoneId,
             JsonSerializer.Serialize(projection, JsonOptions), now);
-        if (services.GetService<IWeeklySummaryNarrativeProvider>() is not null)
+        if (activation.IsEnabled(AppliedFarmIntelligenceOperation.WeeklySummaryNarrative))
         {
             summary.MarkNarrativePending();
             var eventId = Guid.NewGuid();

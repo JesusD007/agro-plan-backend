@@ -43,18 +43,21 @@ internal sealed class ApiTestFactory : WebApplicationFactory<AgroApi::Program>
     private readonly string _environment;
     private readonly string? _rabbitMqUrl;
     private readonly bool _disableBackgroundServices;
+    private readonly IReadOnlyDictionary<string, string?>? _additionalConfiguration;
     private readonly Dictionary<string, string?> _previousEnvironment = new(StringComparer.Ordinal);
 
     public ApiTestFactory(
         string connectionString,
         string environment = "Development",
         string? rabbitMqUrl = null,
-        bool disableBackgroundServices = false)
+        bool disableBackgroundServices = false,
+        IReadOnlyDictionary<string, string?>? additionalConfiguration = null)
     {
         _connectionString = connectionString;
         _environment = environment;
         _rabbitMqUrl = rabbitMqUrl;
         _disableBackgroundServices = disableBackgroundServices;
+        _additionalConfiguration = additionalConfiguration;
 
         // Minimal hosting reads its configuration before WebApplicationFactory's
         // ConfigureAppConfiguration callback runs. Set these early-read values
@@ -82,8 +85,9 @@ internal sealed class ApiTestFactory : WebApplicationFactory<AgroApi::Program>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment(_environment);
-        builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(
-            new Dictionary<string, string?>
+        builder.ConfigureAppConfiguration((_, configuration) =>
+        {
+            var values = new Dictionary<string, string?>
             {
                 ["ConnectionStrings:AgroPlan"] = _connectionString,
                 ["Jwt:Issuer"] = TestSettings.Issuer,
@@ -93,7 +97,11 @@ internal sealed class ApiTestFactory : WebApplicationFactory<AgroApi::Program>
                 ["Recovery:PasswordChangeTokenLifetimeMinutes"] = "15",
                 ["WorkerInvitations:AcceptanceUrl"] = "https://client.example.test/accept-worker-invitation",
                 ["RABBITMQ_URL"] = _rabbitMqUrl
-            }));
+            };
+            if (_additionalConfiguration is not null)
+                foreach (var (key, value) in _additionalConfiguration) values[key] = value;
+            configuration.AddInMemoryCollection(values);
+        });
 
         builder.ConfigureTestServices(services =>
         {

@@ -4,7 +4,12 @@ using System.Text.Json;
 using AgroPlan.Domain.Symptoms;
 using AgroPlan.Domain.Farms;
 using AgroPlan.Infrastructure.Identity;
+using AgroPlan.Application.Abstractions;
+using AgroPlan.Worker;
+using AgroPlan.Worker.Jobs;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 
@@ -13,6 +18,59 @@ namespace AgroPlan.IntegrationTests.Api;
 [Collection(PostgreSqlCollection.Name)]
 public sealed class SymptomReportIntegrationTests(PostgreSqlFixture postgres)
 {
+    [Fact]
+    public async Task Approved_symptom_activation_emits_api_outbox_and_registers_matching_worker()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        postgres.EnsureAvailable();
+        var approved = new Dictionary<string, string?>
+        {
+            ["AppliedFarmIntelligence:SymptomObservation:Enabled"] = "true",
+            ["AppliedFarmIntelligence:SymptomObservation:Provider"] = "approved-observation-provider",
+            ["AppliedFarmIntelligence:SymptomObservation:VerifiedOperation"] = "observation",
+            ["AppliedFarmIntelligence:SymptomObservation:EvidenceApproved"] = "true"
+        };
+        await using var factory = new ApiTestFactory(postgres.ConnectionString,
+            additionalConfiguration: approved);
+        using var client = factory.CreateClient();
+        var ownerId = $"symptom-ai-approved-{Guid.NewGuid():N}";
+        Guid farmId;
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AgroPlan.Infrastructure.Persistence.AgroPlanDbContext>();
+            (farmId, _) = await TestData.SeedFarmAsync(db, ownerId);
+        }
+        TestData.SetBearer(client, ownerId);
+        using var upload = await client.PostAsJsonAsync($"/api/farms/{farmId}/symptom-reports/upload-authorizations", new
+        {
+            cropCycleId = (Guid?)null,
+            contentType = "image/png",
+            sizeBytes = 512L,
+            externalProcessingConsent = true,
+            consentNoticeVersion = "symptom-ai-v1"
+        }, ct);
+        Assert.Equal(HttpStatusCode.OK, upload.StatusCode);
+        using var uploadJson = JsonDocument.Parse(await upload.Content.ReadAsStringAsync(ct));
+        var reportId = uploadJson.RootElement.GetProperty("reportId").GetGuid();
+        using var finalize = await client.PostAsJsonAsync($"/api/farms/{farmId}/symptom-reports", new { reportId }, ct);
+        Assert.Equal(HttpStatusCode.Accepted, finalize.StatusCode);
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AgroPlan.Infrastructure.Persistence.AgroPlanDbContext>();
+            Assert.True(await db.OutboxMessages.AnyAsync(x => x.AggregateId == reportId &&
+                x.EventType == "symptom-observation.requested", ct));
+        }
+
+        var workerServices = new ServiceCollection();
+        workerServices.AddSingleton<ISymptomObservationProvider>(_ =>
+            throw new InvalidOperationException("Registration must not resolve providers."));
+        workerServices.AddSingleton<IFileStorage>(factory.Storage);
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(approved).Build();
+        AppliedFarmIntelligenceWorkerRegistration.Register(workerServices, configuration, "Production");
+        Assert.Contains(workerServices, descriptor => descriptor.ServiceType == typeof(IHostedService) &&
+            descriptor.ImplementationType == typeof(SymptomObservationConsumer));
+    }
+
     [Fact]
     public async Task Active_farm_member_can_request_private_symptom_photo_upload_authorization()
     {

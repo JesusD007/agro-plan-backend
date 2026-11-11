@@ -7,11 +7,16 @@ using AgroPlan.Domain.Farms;
 using AgroPlan.Domain.Operations;
 using AgroPlan.Domain.Reports;
 using AgroPlan.Domain.Workforce;
+using AgroPlan.Application.Abstractions;
 using AgroPlan.Infrastructure.Identity;
 using AgroPlan.Infrastructure.Persistence;
+using AgroPlan.Worker;
+using AgroPlan.Worker.Jobs;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 using Xunit;
 
 namespace AgroPlan.IntegrationTests.Api;
@@ -19,6 +24,96 @@ namespace AgroPlan.IntegrationTests.Api;
 [Collection(PostgreSqlCollection.Name)]
 public sealed class WeeklySummaryTests(PostgreSqlFixture postgres)
 {
+    [Fact]
+    public async Task Approved_shared_activation_enqueues_api_outbox_and_registers_matching_worker()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        postgres.EnsureAvailable();
+        var enabledValues = new Dictionary<string, string?>
+        {
+            ["AppliedFarmIntelligence:WeeklySummary:Enabled"] = "true",
+            ["AppliedFarmIntelligence:WeeklySummary:Provider"] = "approved-narrative-provider",
+            ["AppliedFarmIntelligence:WeeklySummary:VerifiedOperation"] = "narrative",
+            ["AppliedFarmIntelligence:WeeklySummary:EvidenceApproved"] = "true"
+        };
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(enabledValues).Build();
+        await using (var factory = new ApiTestFactory(postgres.ConnectionString,
+                         additionalConfiguration: enabledValues))
+        {
+            using var client = factory.CreateClient();
+            var ownerId = $"weekly-ai-enabled-{Guid.NewGuid():N}";
+            Guid farmId;
+            await using (var scope = factory.Services.CreateAsyncScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<AgroPlanDbContext>();
+                (farmId, _) = await TestData.SeedFarmAsync(db, ownerId);
+                var settings = new FarmWorkerSettings(farmId);
+                settings.SetTimeZone("America/Santo_Domingo");
+                db.FarmWorkerSettings.Add(settings);
+                await db.SaveChangesAsync(ct);
+            }
+            TestData.SetBearer(client, ownerId);
+            using var response = await client.PostAsJsonAsync($"/api/farms/{farmId}/weekly-summaries",
+                new { weekAnchorDate = new DateOnly(2026, 11, 9), cropCycleId = (Guid?)null }, ct);
+            Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+            using var result = JsonDocument.Parse(await response.Content.ReadAsStringAsync(ct));
+            var summaryId = result.RootElement.GetProperty("id").GetGuid();
+            Assert.Equal("Pending", result.RootElement.GetProperty("narrativeStatus").GetString());
+            await using (var scope = factory.Services.CreateAsyncScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<AgroPlanDbContext>();
+                Assert.True(await db.OutboxMessages.AnyAsync(x => x.AggregateId == summaryId &&
+                    x.EventType == "weekly-summary.narrative.requested", ct));
+            }
+        }
+
+        var workerServices = new ServiceCollection();
+        workerServices.AddSingleton<IWeeklySummaryNarrativeProvider>(_ =>
+            throw new InvalidOperationException("Registration must not resolve providers."));
+        AppliedFarmIntelligenceWorkerRegistration.Register(workerServices, configuration, "Production");
+        Assert.Contains(workerServices, descriptor => descriptor.ServiceType == typeof(IHostedService) &&
+            descriptor.ImplementationType == typeof(WeeklySummaryConsumer));
+
+        var disabledValues = new Dictionary<string, string?>(enabledValues)
+        {
+            ["AppliedFarmIntelligence:WeeklySummary:Enabled"] = "false"
+        };
+        await using var disabledFactory = new ApiTestFactory(postgres.ConnectionString,
+            additionalConfiguration: disabledValues);
+        using var disabledClient = disabledFactory.CreateClient();
+        var disabledOwner = $"weekly-ai-disabled-{Guid.NewGuid():N}";
+        Guid disabledFarm;
+        await using (var scope = disabledFactory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AgroPlanDbContext>();
+            (disabledFarm, _) = await TestData.SeedFarmAsync(db, disabledOwner);
+            var settings = new FarmWorkerSettings(disabledFarm);
+            settings.SetTimeZone("America/Santo_Domingo");
+            db.FarmWorkerSettings.Add(settings);
+            await db.SaveChangesAsync(ct);
+        }
+        TestData.SetBearer(disabledClient, disabledOwner);
+        using var disabledResponse = await disabledClient.PostAsJsonAsync($"/api/farms/{disabledFarm}/weekly-summaries",
+            new { weekAnchorDate = new DateOnly(2026, 11, 9), cropCycleId = (Guid?)null }, ct);
+        Assert.Equal(HttpStatusCode.Created, disabledResponse.StatusCode);
+        using var disabledResult = JsonDocument.Parse(await disabledResponse.Content.ReadAsStringAsync(ct));
+        var disabledSummaryId = disabledResult.RootElement.GetProperty("id").GetGuid();
+        Assert.Equal("Unavailable", disabledResult.RootElement.GetProperty("narrativeStatus").GetString());
+        await using (var scope = disabledFactory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AgroPlanDbContext>();
+            Assert.False(await db.OutboxMessages.AnyAsync(x => x.AggregateId == disabledSummaryId &&
+                x.EventType == "weekly-summary.narrative.requested", ct));
+        }
+        var disabledWorkerServices = new ServiceCollection();
+        disabledWorkerServices.AddSingleton<IWeeklySummaryNarrativeProvider>(_ =>
+            throw new InvalidOperationException("Registration must not resolve providers."));
+        AppliedFarmIntelligenceWorkerRegistration.Register(disabledWorkerServices,
+            new ConfigurationBuilder().AddInMemoryCollection(disabledValues).Build(), "Production");
+        Assert.DoesNotContain(disabledWorkerServices, descriptor => descriptor.ServiceType == typeof(IHostedService) &&
+            descriptor.ImplementationType == typeof(WeeklySummaryConsumer));
+    }
+
     [Fact]
     public async Task Owner_can_request_a_farm_local_weekly_summary()
     {
