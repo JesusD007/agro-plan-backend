@@ -57,6 +57,7 @@ public sealed class SymptomReportCleanupTests(PostgreSqlFixture postgres)
         var body = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(new { eventId, farmId, reportId, version },
             new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
         await consumer.ProcessMessageAsync(eventId, body, ct);
+        await consumer.ProcessMessageAsync(eventId, body, ct);
 
         Assert.Equal(1, provider.CallCount);
         Assert.Equal(512, provider.LastPhotoBytes);

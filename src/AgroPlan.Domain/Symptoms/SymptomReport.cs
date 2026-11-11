@@ -86,7 +86,7 @@ public sealed class SymptomReport
 
     public bool TryStartObservation(DateTimeOffset now)
     {
-        if (Status != SymptomReportStatus.Pending) return false;
+        if (Status is not (SymptomReportStatus.Pending or SymptomReportStatus.Processing)) return false;
         if (ProcessingStartedAt.HasValue && ProcessingStartedAt.Value > now.AddMinutes(-15)) return false;
         Status = SymptomReportStatus.Processing;
         ProcessingStartedAt = now;

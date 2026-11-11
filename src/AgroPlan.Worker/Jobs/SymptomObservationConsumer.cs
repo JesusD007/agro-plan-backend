@@ -66,6 +66,7 @@ public sealed class SymptomObservationConsumer(RabbitMqConnection connection, IS
             throw new InvalidOperationException("Symptom observation event is invalid.");
 
         List<(Guid Id, string ObjectKey, string ContentType)> photos;
+        int claimedVersion;
         await using (var scope = scopeFactory.CreateAsyncScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AgroPlanDbContext>();
@@ -73,12 +74,21 @@ public sealed class SymptomObservationConsumer(RabbitMqConnection connection, IS
                 x.AggregateId == request.ReportId && x.EventType == "symptom-observation.requested", ct);
             if (persisted is null || JsonSerializer.Deserialize<SymptomObservationRequested>(persisted.PayloadJson, JsonOptions) != request)
                 throw new InvalidOperationException("Symptom observation does not match a persisted outbox event.");
+            await using var transaction = await db.Database.BeginTransactionAsync(ct);
+            await db.Database.ExecuteSqlInterpolatedAsync(
+                $"SELECT \"Id\" FROM agro.symptom_reports WHERE \"FarmId\" = {request.FarmId} AND \"Id\" = {request.ReportId} FOR UPDATE", ct);
             var report = await db.Set<SymptomReport>().Include(x => x.Photos).SingleOrDefaultAsync(x =>
-                x.FarmId == request.FarmId && x.Id == request.ReportId && x.Version == request.Version && x.Status == SymptomReportStatus.Pending, ct);
+                x.FarmId == request.FarmId && x.Id == request.ReportId &&
+                (x.Version == request.Version && x.Status == SymptomReportStatus.Pending ||
+                 x.Version == request.Version + 1 && x.Status == SymptomReportStatus.Processing), ct);
             if (report is null || !await HasActiveSubmitterAsync(db, report, ct)) return;
             photos = report.Photos.Where(p => p.ConsentGranted && !p.ConsentRevokedAt.HasValue && p.FinalizedAt.HasValue &&
                 p.DeletedAt == null && p.ObjectKey != null).Select(p => (p.Id, p.ObjectKey!, p.ContentType)).ToList();
             if (photos.Count == 0) return;
+            if (!report.TryStartObservation(DateTimeOffset.UtcNow)) return;
+            claimedVersion = report.Version;
+            await db.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
         }
 
         var results = new List<SymptomObservationResult>();
@@ -88,37 +98,58 @@ public sealed class SymptomObservationConsumer(RabbitMqConnection connection, IS
             await using (var scope = scopeFactory.CreateAsyncScope())
             {
                 var db = scope.ServiceProvider.GetRequiredService<AgroPlanDbContext>();
-                if (!await IsAuthorizedAsync(db, request, photo.Id, ct)) return;
+                if (!await IsAuthorizedAsync(db, request, claimedVersion, photo.Id, ct))
+                {
+                    await ReturnToPendingAsync(request, claimedVersion, ct);
+                    return;
+                }
             }
             var bytes = await storage.ReadObjectAsync(photo.ObjectKey, SymptomPhotoInspector.MaximumPhotoBytes, ct);
-            if (bytes is null || !SymptomPhotoInspector.TryInspect(bytes, photo.ContentType, out _)) continue;
+            if (bytes is null || !SymptomPhotoInspector.TryInspect(bytes, photo.ContentType, out _))
+            {
+                await ReturnToPendingAsync(request, claimedVersion, ct);
+                return;
+            }
 
             // Consent can be withdrawn while storage is read; make a fresh DB check before calling the provider.
             await using (var scope = scopeFactory.CreateAsyncScope())
             {
                 var db = scope.ServiceProvider.GetRequiredService<AgroPlanDbContext>();
-                if (!await IsAuthorizedAsync(db, request, photo.Id, ct)) return;
+                if (!await IsAuthorizedAsync(db, request, claimedVersion, photo.Id, ct))
+                {
+                    await ReturnToPendingAsync(request, claimedVersion, ct);
+                    return;
+                }
             }
             try { results.Add(await provider.ObserveAsync(new SymptomObservationRequest(bytes, null, null), ct)); }
             catch (SymptomObservationProviderException exception) when (exception.FailureKind == SymptomObservationFailureKind.NotConfigured)
-            { return; }
+            { await ReturnToPendingAsync(request, claimedVersion, ct); return; }
+            catch
+            {
+                await ReturnToPendingAsync(request, claimedVersion, ct);
+                throw;
+            }
         }
-        if (results.Count == 0) return;
+        if (results.Count == 0) { await ReturnToPendingAsync(request, claimedVersion, ct); return; }
 
         // Output is untrusted. Bound it and re-check access/consent before persisting anything.
         var visible = string.Join(" ", results.Select(x => x.VisibleSigns).Where(x => !string.IsNullOrWhiteSpace(x))).Trim();
         var uncertainty = string.Join(" ", results.Select(x => x.Uncertainty).Where(x => !string.IsNullOrWhiteSpace(x))).Trim();
         var evidence = results.SelectMany(x => x.RequestedEvidence ?? []).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct().Take(20).ToArray();
-        if (visible.Length > 4000 || uncertainty.Length > 2000 || evidence.Any(x => x.Length > 200)) return;
+        if (visible.Length > 4000 || uncertainty.Length > 2000 || evidence.Any(x => x.Length > 200))
+        { await ReturnToPendingAsync(request, claimedVersion, ct); return; }
 
         await using (var scope = scopeFactory.CreateAsyncScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AgroPlanDbContext>();
             var report = await db.Set<SymptomReport>().Include(x => x.Photos).SingleOrDefaultAsync(x =>
-                x.FarmId == request.FarmId && x.Id == request.ReportId && x.Version == request.Version && x.Status == SymptomReportStatus.Pending, ct);
+                x.FarmId == request.FarmId && x.Id == request.ReportId && x.Version == claimedVersion && x.Status == SymptomReportStatus.Processing, ct);
             if (report is null || !await HasActiveSubmitterAsync(db, report, ct) ||
-                !photos.All(photo => report.Photos.Any(p => p.Id == photo.Id && p.ConsentGranted && !p.ConsentRevokedAt.HasValue))) return;
-            if (!report.TryStartObservation(DateTimeOffset.UtcNow)) return;
+                !photos.All(photo => report.Photos.Any(p => p.Id == photo.Id && p.ConsentGranted && !p.ConsentRevokedAt.HasValue)))
+            {
+                if (report is not null) { report.ReturnToPending(DateTimeOffset.UtcNow); await db.SaveChangesAsync(ct); }
+                return;
+            }
             report.CompleteObservation(visible, uncertainty, results.All(x => x.ImageSufficient), evidence, DateTimeOffset.UtcNow);
             try { await db.SaveChangesAsync(ct); }
             catch (DbUpdateConcurrencyException) { /* A newer report state wins; discard stale model output. */ }
@@ -128,10 +159,22 @@ public sealed class SymptomObservationConsumer(RabbitMqConnection connection, IS
     private static Task<bool> HasActiveSubmitterAsync(AgroPlanDbContext db, SymptomReport report, CancellationToken ct) =>
         db.FarmMemberships.AsNoTracking().AnyAsync(x => x.FarmId == report.FarmId && x.UserId == report.SubmittedByUserId && x.IsActive, ct);
 
-    private static async Task<bool> IsAuthorizedAsync(AgroPlanDbContext db, SymptomObservationRequested request, Guid photoId, CancellationToken ct)
+    private async Task ReturnToPendingAsync(SymptomObservationRequested request, int claimedVersion, CancellationToken ct)
+    {
+        await using var scope = scopeFactory.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AgroPlanDbContext>();
+        var report = await db.Set<SymptomReport>().SingleOrDefaultAsync(x => x.FarmId == request.FarmId &&
+            x.Id == request.ReportId && x.Version == claimedVersion && x.Status == SymptomReportStatus.Processing, ct);
+        if (report is null) return;
+        report.ReturnToPending(DateTimeOffset.UtcNow);
+        await db.SaveChangesAsync(ct);
+    }
+
+    private static async Task<bool> IsAuthorizedAsync(AgroPlanDbContext db, SymptomObservationRequested request,
+        int claimedVersion, Guid photoId, CancellationToken ct)
     {
         var report = await db.Set<SymptomReport>().AsNoTracking().Include(x => x.Photos).SingleOrDefaultAsync(x =>
-            x.FarmId == request.FarmId && x.Id == request.ReportId && x.Version == request.Version && x.Status == SymptomReportStatus.Pending, ct);
+            x.FarmId == request.FarmId && x.Id == request.ReportId && x.Version == claimedVersion && x.Status == SymptomReportStatus.Processing, ct);
         return report is not null && await HasActiveSubmitterAsync(db, report, ct) && report.Photos.Any(p => p.Id == photoId &&
             p.ConsentGranted && !p.ConsentRevokedAt.HasValue && p.FinalizedAt.HasValue && p.DeletedAt == null);
     }
