@@ -84,6 +84,16 @@ public sealed class SymptomReport
         Version++;
     }
 
+    public void BeginAdditionalEvidenceUpload(DateTimeOffset at)
+    {
+        var latestDecision = Decisions.OrderByDescending(decision => decision.DecidedAt).FirstOrDefault();
+        if (Status != SymptomReportStatus.Pending || latestDecision?.Action != SymptomReviewAction.MoreEvidenceRequested)
+            throw new InvalidOperationException("Additional evidence can only be uploaded after an agronomist requests it.");
+        Status = SymptomReportStatus.Uploading;
+        SubmittedAt = null;
+        Version++;
+    }
+
     public bool TryStartObservation(DateTimeOffset now)
     {
         if (Status is not (SymptomReportStatus.Pending or SymptomReportStatus.Processing)) return false;

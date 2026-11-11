@@ -41,9 +41,17 @@ public sealed class SymptomReportsController(AgroPlanDbContext db, IFileStorage 
 
         var now = DateTimeOffset.UtcNow;
         var report = request.ReportId.HasValue
-            ? await db.Set<SymptomReport>().Include(x => x.Photos).SingleOrDefaultAsync(x => x.FarmId == farmId && x.Id == request.ReportId, ct)
+            ? await db.Set<SymptomReport>().Include(x => x.Photos).Include(x => x.Decisions)
+                .SingleOrDefaultAsync(x => x.FarmId == farmId && x.Id == request.ReportId, ct)
             : null;
-        if (request.ReportId.HasValue && (report is null || report.SubmittedByUserId != actor || report.Status != SymptomReportStatus.Uploading)) return NotFound();
+        if (request.ReportId.HasValue && (report is null || report.SubmittedByUserId != actor)) return NotFound();
+        if (report?.Status == SymptomReportStatus.Pending)
+        {
+            try { report.BeginAdditionalEvidenceUpload(now); }
+            catch (InvalidOperationException) { return Conflict(new { code = "SYMPTOM_REPORT_NOT_ACCEPTING_EVIDENCE" }); }
+        }
+        else if (report is not null && report.Status != SymptomReportStatus.Uploading)
+            return Conflict(new { code = "SYMPTOM_REPORT_NOT_ACCEPTING_EVIDENCE" });
         if (report is not null && report.CropCycleId != request.CropCycleId) return BadRequest(new { code = "SYMPTOM_CROP_CYCLE_MISMATCH" });
         report ??= new SymptomReport(Guid.NewGuid(), farmId, actor, request.CropCycleId, request.Notes, now);
         if (report.Photos.Count >= SymptomPhotoInspector.MaximumPhotosPerReport) return BadRequest(new { code = "SYMPTOM_PHOTO_LIMIT" });

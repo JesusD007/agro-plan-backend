@@ -148,6 +148,78 @@ public sealed class SymptomReportIntegrationTests(PostgreSqlFixture postgres)
     }
 
     [Fact]
+    public async Task Requested_additional_evidence_can_be_uploaded_finalized_and_reviewed_again()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        postgres.EnsureAvailable();
+        await using var factory = new ApiTestFactory(postgres.ConnectionString);
+        using var ownerClient = factory.CreateClient();
+        var ownerId = $"symptom-evidence-owner-{Guid.NewGuid():N}";
+        var agronomistId = $"symptom-evidence-agronomist-{Guid.NewGuid():N}";
+        Guid farmId;
+        Guid reportId;
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AgroPlan.Infrastructure.Persistence.AgroPlanDbContext>();
+            (farmId, _) = await TestData.SeedFarmAsync(db, ownerId);
+            db.Users.Add(new ApplicationUser { Id = agronomistId, UserName = agronomistId,
+                NormalizedUserName = agronomistId.ToUpperInvariant(), Email = $"{agronomistId}@example.test",
+                NormalizedEmail = $"{agronomistId}@EXAMPLE.TEST", EmailConfirmed = true });
+            db.Set<TrustedAgronomistVerification>().Add(new TrustedAgronomistVerification(
+                agronomistId, ownerId, "credential-ref", DateTimeOffset.UtcNow));
+            db.Set<FarmAgronomistAuthorization>().Add(new FarmAgronomistAuthorization(
+                farmId, agronomistId, ownerId, DateTimeOffset.UtcNow));
+            var report = new SymptomReport(Guid.NewGuid(), farmId, ownerId, null, "Initial notes", DateTimeOffset.UtcNow);
+            var originalPhoto = new SymptomReportPhoto(Guid.NewGuid(), "private/original-staging", "image/png", 512,
+                ownerId, false, null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddMinutes(10));
+            originalPhoto.Finalize("private/original-final", 512, DateTimeOffset.UtcNow);
+            report.AddPhoto(originalPhoto);
+            report.Submit(DateTimeOffset.UtcNow);
+            report.AddDecision(new SymptomReportDecision(Guid.NewGuid(), SymptomReviewAction.MoreEvidenceRequested,
+                agronomistId, DateTimeOffset.UtcNow, "Take a closer photo of the affected leaf."));
+            reportId = report.Id;
+            db.Add(report);
+            await db.SaveChangesAsync(ct);
+        }
+
+        TestData.SetBearer(ownerClient, ownerId);
+        using var upload = await ownerClient.PostAsJsonAsync($"/api/farms/{farmId}/symptom-reports/upload-authorizations", new
+        {
+            reportId,
+            cropCycleId = (Guid?)null,
+            contentType = "image/png",
+            sizeBytes = 512L,
+            externalProcessingConsent = false,
+            consentNoticeVersion = (string?)null
+        }, ct);
+        Assert.Equal(HttpStatusCode.OK, upload.StatusCode);
+        using var uploadJson = JsonDocument.Parse(await upload.Content.ReadAsStringAsync(ct));
+        var additionalPhotoId = uploadJson.RootElement.GetProperty("photoId").GetGuid();
+
+        using var finalize = await ownerClient.PostAsJsonAsync($"/api/farms/{farmId}/symptom-reports", new { reportId }, ct);
+        Assert.Equal(HttpStatusCode.Accepted, finalize.StatusCode);
+
+        using var agronomistClient = factory.CreateClient();
+        TestData.SetBearer(agronomistClient, agronomistId);
+        using var reReview = await agronomistClient.PostAsJsonAsync($"/api/farms/{farmId}/symptom-reports/{reportId}/review",
+            new { action = SymptomReviewAction.MoreEvidenceRequested, requestedEvidence = "Add a wider view of the plant.", diagnosis = (string?)null, treatment = (string?)null }, ct);
+        Assert.Equal(HttpStatusCode.OK, reReview.StatusCode);
+
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AgroPlan.Infrastructure.Persistence.AgroPlanDbContext>();
+            var report = await db.Set<SymptomReport>().Include(x => x.Photos).Include(x => x.Decisions)
+                .SingleAsync(x => x.Id == reportId, ct);
+            Assert.Equal(SymptomReportStatus.Pending, report.Status);
+            Assert.Equal(2, report.Photos.Count);
+            Assert.Contains(report.Photos, photo => photo.Id == additionalPhotoId && photo.FinalizedAt.HasValue);
+            Assert.Equal(2, report.Decisions.Count);
+            Assert.Equal(SymptomReviewAction.MoreEvidenceRequested,
+                report.Decisions.OrderBy(decision => decision.DecidedAt).Last().Action);
+        }
+    }
+
+    [Fact]
     public async Task Only_currently_verified_and_assigned_agronomist_can_review_and_read_private_photos()
     {
         var ct = TestContext.Current.CancellationToken;
