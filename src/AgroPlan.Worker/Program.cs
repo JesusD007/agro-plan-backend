@@ -9,6 +9,7 @@ using AgroPlan.Worker.Climate;
 using AgroPlan.Application.Abstractions;
 using AgroPlan.Application.Workforce;
 using AgroPlan.Infrastructure.Calendars;
+using AgroPlan.Infrastructure.Storage;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 
@@ -21,6 +22,12 @@ if (!string.IsNullOrWhiteSpace(rabbitMqUrl))
         throw new InvalidOperationException("Configure ConnectionStrings__AgroPlan when RABBITMQ_URL is enabled.");
     builder.Services.AddDbContext<AgroPlanDbContext>(options => options.UseNpgsql(connectionString));
     builder.Services.AddSingleton<RabbitMqConnection>();
+    if (!string.IsNullOrWhiteSpace(builder.Configuration["SUPABASE_STORAGE_BUCKET"]) ||
+        !string.IsNullOrWhiteSpace(builder.Configuration["Supabase:Storage:Bucket"]))
+    {
+        builder.Services.AddSingleton<IFileStorage, SupabaseFileStorage>();
+        builder.Services.AddHostedService<SymptomPhotoCleanupService>();
+    }
     builder.Services.AddSingleton<IAiProposalProvider, GeminiProposalProvider>();
     builder.Services.AddSingleton<IClimateProvider, UnconfiguredClimateProvider>();
     builder.Services.AddSingleton<IExternalWorkCalendar, UnconfiguredWorkCalendar>();
@@ -33,6 +40,9 @@ if (!string.IsNullOrWhiteSpace(rabbitMqUrl))
     builder.Services.AddHostedService<TaskCalendarSyncConsumer>();
     if (builder.Services.Any(descriptor => descriptor.ServiceType == typeof(IWeeklySummaryNarrativeProvider)))
         builder.Services.AddHostedService<WeeklySummaryConsumer>();
+    if (builder.Services.Any(descriptor => descriptor.ServiceType == typeof(ISymptomObservationProvider)) &&
+        builder.Services.Any(descriptor => descriptor.ServiceType == typeof(IFileStorage)))
+        builder.Services.AddHostedService<SymptomObservationConsumer>();
 }
 else
 {

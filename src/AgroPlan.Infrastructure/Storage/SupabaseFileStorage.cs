@@ -48,6 +48,13 @@ public sealed class SupabaseFileStorage(IConfiguration configuration) : IFileSto
         return CreateUploadAuthorization(key, contentType, expiresAt);
     }
 
+    public UploadAuthorization CreateSymptomReportUploadAuthorization(Guid farmId, Guid reportId, Guid photoId,
+        string contentType, DateTimeOffset expiresAt)
+    {
+        var key = $"farms/{farmId:D}/symptom-reports/{reportId:D}/{photoId:D}/staging";
+        return CreateUploadAuthorization(key, contentType, expiresAt);
+    }
+
     private UploadAuthorization CreateUploadAuthorization(string key, string contentType, DateTimeOffset expiresAt)
     {
         var url = _client.Value.GetPreSignedURL(new GetPreSignedUrlRequest

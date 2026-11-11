@@ -141,6 +141,7 @@ internal sealed class RecordingFileStorage : IFileStorage
 {
     private const long FileSize = 512;
     private static readonly byte[] VoiceWave = CreateWave();
+    private static readonly byte[] ImageBytes = CreatePng();
     private readonly ConcurrentQueue<string> _deletedObjectKeys = new();
     public IReadOnlyList<string> DeletedObjectKeys => _deletedObjectKeys.ToArray();
 
@@ -159,6 +160,11 @@ internal sealed class RecordingFileStorage : IFileStorage
         $"farms/{farmId:D}/voice-drafts/{draftId:D}/staging",
         $"https://uploads.invalid/{draftId:D}", expiresAt, contentType);
 
+    public UploadAuthorization CreateSymptomReportUploadAuthorization(Guid farmId, Guid reportId, Guid photoId,
+        string contentType, DateTimeOffset expiresAt) => new(
+        $"farms/{farmId:D}/symptom-reports/{reportId:D}/{photoId:D}/staging",
+        $"https://uploads.invalid/{photoId:D}", expiresAt, contentType);
+
     public UploadAuthorization CreateDownloadAuthorization(string objectKey, DateTimeOffset expiresAt) => new(
         objectKey, $"https://downloads.invalid/{Uri.EscapeDataString(objectKey)}", expiresAt, "image/png");
 
@@ -168,9 +174,9 @@ internal sealed class RecordingFileStorage : IFileStorage
             : new StoredObjectMetadata(FileSize, "image/png"));
 
     public Task<byte[]?> ReadObjectAsync(string objectKey, long maximumSizeBytes, CancellationToken cancellationToken) =>
-        Task.FromResult<byte[]?>(objectKey.Contains("/voice-drafts/", StringComparison.Ordinal) && VoiceWave.Length <= maximumSizeBytes
-            ? [.. VoiceWave]
-            : null);
+        Task.FromResult<byte[]?>(objectKey.Contains("/voice-drafts/", StringComparison.Ordinal)
+            ? VoiceWave.Length <= maximumSizeBytes ? [.. VoiceWave] : null
+            : ImageBytes.Length <= maximumSizeBytes ? [.. ImageBytes] : null);
 
     public Task<FinalizedStoredObject?> FinalizeUploadAsync(string stagingObjectKey, string finalObjectKey,
         CancellationToken cancellationToken)
@@ -202,6 +208,15 @@ internal sealed class RecordingFileStorage : IFileStorage
         BitConverter.GetBytes((short)16).CopyTo(bytes, 34);
         System.Text.Encoding.ASCII.GetBytes("data").CopyTo(bytes, 36);
         BitConverter.GetBytes(dataLength).CopyTo(bytes, 40);
+        return bytes;
+    }
+
+    private static byte[] CreatePng()
+    {
+        var bytes = new byte[FileSize];
+        byte[] header = [137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82,
+            0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0];
+        header.CopyTo(bytes, 0);
         return bytes;
     }
 }
