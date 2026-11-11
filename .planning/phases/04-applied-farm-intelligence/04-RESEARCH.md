@@ -304,6 +304,18 @@ Only question 1 is a production activation gate. Questions 2–4 are implementat
    - What's unclear: Byte, image-count, dimension, request-rate and summary source caps.
    - Recommendation: Specify server-side byte/count limits and partial/unavailable behavior before implementation; do not silently truncate source evidence. This is not an open decision about audio duration or deletion timing.
 
+## Planning Resolutions for Open Questions
+
+Question 1 remains a production gate: the speech provider is not selected, and no production language is enabled before exact-operation compatibility and human evaluation pass. Questions 2–4 are resolved as implementation defaults for this phase; they do not change the locked user decisions and remain visible in the plans for review.
+
+| Question | Phase 04 implementation resolution |
+|----------|------------------------------------|
+| Q2: timezone mapping and invalid values | Reuse `FarmWorkerSettings.ResolveTimeZone()` and its platform-supported `TimeZoneInfo` lookup. Missing or invalid farm configuration returns an explicit unavailable result; cover Monday boundaries, daylight-saving transitions, and invalid IDs in xUnit v3. |
+| Q3: authorization changes during queued work | Re-read active membership and any worker task assignment immediately before private-media retrieval and again immediately before an external call. After the call, re-read before persisting or publishing output. Revocation or consent withdrawal cancels the job, discards provider output, and never exposes a draft/observation; media follows the already-locked retention rule. Summary jobs revalidate the owner/admin membership before source projection and provider calls; advisor grants are checked before every share, summary read, and source read, and no advisor-triggered provider call may bypass that scope. |
+| Q4: media and summary bounds | Enforce 300-second and 10 MiB caps for one voice recording; accept only server-inspectable, provider-compatible audio formats. Allow up to five JPEG/PNG/WebP photos per report, 10 MiB each, 8,192 pixels maximum per edge, 20 megapixels per image and 50 megapixels total. Reject a farm-week projection above 500 total confirmed-source/pending-task rows without truncating it; suppress narrative and keep deterministic totals when serialized provider input exceeds 64 KiB or provider output exceeds 16 KiB. Apply built-in ASP.NET Core fixed-window limits of 10 media-intake requests per user/farm/hour and 20 summary requests per user/farm/hour. These defaults use existing private-storage patterns and the existing 10 MiB task-evidence cap; tests cover each boundary and explicit error state. |
+
+The user also locked D-12 during plan review: each uploaded audio/photo object requires its own explicit, persisted external-processing consent. Missing or revoked consent keeps the media on the manual path and prevents the external provider call. A real provider must pass privacy/legal review; synthetic fixtures do not establish consent or provider quality.
+
 ## Environment Availability
 
 | Dependency | Required By | Available | Version | Fallback |

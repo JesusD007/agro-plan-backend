@@ -30,6 +30,9 @@ Deliver the three Phase 4 backend capabilities: voice-based editable activity dr
 - **D-10:** Delete report photos when the review is closed or rejected, while retaining the report itself. — **Reversibility:** one-way — deleted source photos cannot be restored.
 - **D-11:** Keep voice processing behind a provider-neutral contract. Validate language support and choose the transcription provider before enabling production, especially for Haitian Creole; Gemini's current language documentation did not verify Creole support.
 
+### Media processing consent
+- **D-12:** Capture explicit consent separately for each uploaded audio recording and each symptom photo before sending that object to an external AI provider. Without consent, retain the manual workflow and do not invoke AI for that media object.
+
 ### Prior decisions that remain binding
 - AI outputs remain drafts and cannot confirm or mutate business records.
 - Keep AI integrations provider-neutral. Gemini remains the current adapter for existing proposal workflows; Phase 4's voice provider must be validated and selected before enabling production.
