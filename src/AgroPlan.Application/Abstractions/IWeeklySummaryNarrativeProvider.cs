@@ -40,4 +40,4 @@ public sealed record WeeklySummaryNarrativeFact(string Kind, decimal Value, stri
 public sealed record WeeklySummaryNarrativeDraft(string Text, IReadOnlyList<string> SourceAliases);
 
 public sealed record WeeklySummaryNarrativeRequested(Guid EventId, Guid FarmId, Guid SummaryId,
-    string RequestedByUserId, int Version);
+    string RequestedByUserId, int Version, int AttemptsAtRequest = 0);

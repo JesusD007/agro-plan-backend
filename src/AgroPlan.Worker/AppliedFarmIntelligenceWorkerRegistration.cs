@@ -33,6 +33,11 @@ public static class AppliedFarmIntelligenceWorkerRegistration
             options.MaxAttempts = configuration.GetValue<int?>("AppliedFarmIntelligence:SymptomObservation:MaxAttempts") ??
                                   SymptomObservationRetryOptions.DefaultMaximumAttempts;
         });
+        services.Configure<WeeklySummaryRetryOptions>(options =>
+        {
+            options.MaxAttempts = configuration.GetValue<int?>("AppliedFarmIntelligence:WeeklySummary:MaxAttempts") ??
+                                  WeeklySummaryRetryOptions.DefaultMaximumAttempts;
+        });
 
         if (isDevelopmentOrTest)
         {

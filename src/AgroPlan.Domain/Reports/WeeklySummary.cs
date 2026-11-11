@@ -58,13 +58,35 @@ public sealed class WeeklySummary
     public string? SharedByUserId { get; private set; }
     public DateTimeOffset? SharedAt { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
+    public int NarrativeAttempts { get; private set; }
+    public DateTimeOffset? NarrativeProcessingStartedAt { get; private set; }
     public int Version { get; private set; }
 
     public void MarkNarrativePending()
     {
         NarrativeStatus = WeeklySummaryNarrativeStatus.Pending;
         NarrativeText = null;
+        NarrativeAttempts = 0;
+        NarrativeProcessingStartedAt = null;
         Version++;
+    }
+
+    public bool TryStartNarrative(DateTimeOffset now, int maximumAttempts, bool allowActiveLeaseTakeover = false)
+    {
+        if (maximumAttempts <= 0 || NarrativeStatus != WeeklySummaryNarrativeStatus.Pending ||
+            NarrativeAttempts >= maximumAttempts) return false;
+        if (!allowActiveLeaseTakeover && NarrativeProcessingStartedAt.HasValue &&
+            NarrativeProcessingStartedAt.Value > now.AddMinutes(-15)) return false;
+        NarrativeProcessingStartedAt = now;
+        NarrativeAttempts++;
+        return true;
+    }
+
+    public bool ReleaseNarrativeAttempt(DateTimeOffset claimedAt)
+    {
+        if (NarrativeStatus != WeeklySummaryNarrativeStatus.Pending || NarrativeProcessingStartedAt != claimedAt) return false;
+        NarrativeProcessingStartedAt = null;
+        return true;
     }
 
     public void SetNarrative(string? text, WeeklySummaryNarrativeStatus status, IReadOnlyCollection<Guid>? sourceIds = null)
@@ -79,6 +101,7 @@ public sealed class WeeklySummary
         NarrativeText = text;
         NarrativeSourceIds = sourceIds?.Distinct().ToArray() ?? [];
         NarrativeStatus = status;
+        NarrativeProcessingStartedAt = null;
         Version++;
     }
 

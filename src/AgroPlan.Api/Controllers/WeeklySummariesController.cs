@@ -114,7 +114,8 @@ public sealed class WeeklySummariesController(AgroPlanDbContext db, IFarmAuthori
         {
             summary.MarkNarrativePending();
             var eventId = Guid.NewGuid();
-            var payload = JsonSerializer.Serialize(new WeeklySummaryNarrativeRequested(eventId, farmId, summary.Id, userId, summary.Version), JsonOptions);
+            var payload = JsonSerializer.Serialize(new WeeklySummaryNarrativeRequested(eventId, farmId, summary.Id, userId,
+                summary.Version, summary.NarrativeAttempts), JsonOptions);
             db.OutboxMessages.Add(new OutboxMessage(eventId, summary.Id, "weekly-summary.narrative.requested", payload, now));
         }
         db.Set<WeeklySummary>().Add(summary);

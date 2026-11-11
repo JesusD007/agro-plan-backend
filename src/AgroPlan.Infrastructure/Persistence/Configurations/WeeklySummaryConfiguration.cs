@@ -26,6 +26,8 @@ public sealed class WeeklySummaryConfiguration : IEntityTypeConfiguration<Weekly
         builder.Property(x => x.SharedAdvisorUserId).HasMaxLength(450);
         builder.Property(x => x.SharedByUserId).HasMaxLength(450);
         builder.Property(x => x.Version).IsConcurrencyToken().IsRequired();
+        builder.Property(x => x.NarrativeAttempts).IsRequired();
+        builder.Property(x => x.NarrativeProcessingStartedAt);
         builder.HasIndex(x => new { x.FarmId, x.WeekStartDate });
         builder.HasIndex(x => new { x.SharedAdvisorUserId, x.FarmId, x.SharedAt });
         builder.HasOne<Farm>().WithMany().HasForeignKey(x => x.FarmId).OnDelete(DeleteBehavior.Restrict);

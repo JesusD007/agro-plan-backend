@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace AgroPlan.IntegrationTests.Worker;
@@ -170,9 +171,11 @@ public sealed class WeeklySummaryConsumerTests(PostgreSqlFixture postgres)
         var provider = new CapturingNarrativeProvider((_, _) => throw new InvalidOperationException(marker));
         var logger = new CapturingLogger<WeeklySummaryConsumer>();
         var consumer = new WeeklySummaryConsumer(factory.Services.GetRequiredService<RabbitMqConnection>(),
-            factory.Services.GetRequiredService<IServiceScopeFactory>(), provider, logger);
+            factory.Services.GetRequiredService<IServiceScopeFactory>(), provider, logger,
+            Options.Create(new WeeklySummaryRetryOptions()));
 
-        await consumer.ProcessMessageAsync(fixture.EventId, fixture.Body, TestContext.Current.CancellationToken);
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            consumer.ProcessMessageAsync(fixture.EventId, fixture.Body, TestContext.Current.CancellationToken));
 
         var logs = string.Join("\n", logger.Messages);
         Assert.Contains(nameof(InvalidOperationException), logs, StringComparison.Ordinal);
@@ -181,9 +184,105 @@ public sealed class WeeklySummaryConsumerTests(PostgreSqlFixture postgres)
         Assert.DoesNotContain(fixture.FarmId.ToString(), logs, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static WeeklySummaryConsumer CreateConsumer(ApiTestFactory factory, IWeeklySummaryNarrativeProvider provider) =>
+    [Fact]
+    public async Task Provider_failures_stop_at_configured_limit_and_leave_deterministic_summary_without_narrative()
+    {
+        postgres.EnsureAvailable();
+        await using var factory = new ApiTestFactory(postgres.ConnectionString, disableBackgroundServices: true);
+        var fixture = await SeedPendingSummaryAsync(factory, $"weekly-summary-retry-limit-{Guid.NewGuid():N}", 1);
+        var provider = new CapturingNarrativeProvider((_, _) => throw new InvalidOperationException("temporary provider outage"));
+        var consumer = CreateConsumer(factory, provider, maxAttempts: 2);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            consumer.ProcessMessageAsync(fixture.EventId, fixture.Body, TestContext.Current.CancellationToken));
+        await consumer.ProcessMessageAsync(fixture.EventId, fixture.Body, TestContext.Current.CancellationToken);
+        // A duplicate after exhaustion is a no-op and returns normally, so RabbitMQ ACKs it.
+        await consumer.ProcessMessageAsync(fixture.EventId, fixture.Body, TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, provider.CallCount);
+        await using var verify = factory.Services.CreateAsyncScope();
+        var db = verify.ServiceProvider.GetRequiredService<AgroPlanDbContext>();
+        var stored = await db.Set<WeeklySummary>().SingleAsync(x => x.Id == fixture.SummaryId,
+            TestContext.Current.CancellationToken);
+        Assert.Equal(WeeklySummaryNarrativeStatus.Failed, stored.NarrativeStatus);
+        Assert.Null(stored.NarrativeText);
+        Assert.Empty(stored.NarrativeSourceIds);
+        Assert.Equal(2, stored.NarrativeAttempts);
+        Assert.Null(stored.NarrativeProcessingStartedAt);
+        Assert.Single(JsonSerializer.Deserialize<WeeklySummaryProjection>(stored.ProjectionJson,
+            new JsonSerializerOptions(JsonSerializerDefaults.Web))!.Sources);
+    }
+
+    [Fact]
+    public async Task Provider_retry_recovers_and_completes_narrative_before_limit()
+    {
+        postgres.EnsureAvailable();
+        await using var factory = new ApiTestFactory(postgres.ConnectionString, disableBackgroundServices: true);
+        var fixture = await SeedPendingSummaryAsync(factory, $"weekly-summary-retry-recover-{Guid.NewGuid():N}", 1);
+        var providerCallCount = 0;
+        var provider = new CapturingNarrativeProvider((input, _) =>
+        {
+            if (providerCallCount++ == 0) throw new InvalidOperationException("temporary provider outage");
+            return Task.FromResult(new WeeklySummaryNarrativeDraft("The farm recorded an expense.",
+                [Assert.Single(input.Sources).Alias]));
+        });
+        var consumer = CreateConsumer(factory, provider, maxAttempts: 3);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            consumer.ProcessMessageAsync(fixture.EventId, fixture.Body, TestContext.Current.CancellationToken));
+        await consumer.ProcessMessageAsync(fixture.EventId, fixture.Body, TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, provider.CallCount);
+        await using var verify = factory.Services.CreateAsyncScope();
+        var stored = await verify.ServiceProvider.GetRequiredService<AgroPlanDbContext>().Set<WeeklySummary>()
+            .SingleAsync(x => x.Id == fixture.SummaryId, TestContext.Current.CancellationToken);
+        Assert.Equal(WeeklySummaryNarrativeStatus.Available, stored.NarrativeStatus);
+        Assert.Equal("The farm recorded an expense.", stored.NarrativeText);
+        Assert.Equal(2, stored.NarrativeAttempts);
+        Assert.Null(stored.NarrativeProcessingStartedAt);
+    }
+
+    [Fact]
+    public async Task Old_event_version_cannot_finalize_or_retry_a_narrative_after_summary_changes()
+    {
+        postgres.EnsureAvailable();
+        await using var factory = new ApiTestFactory(postgres.ConnectionString, disableBackgroundServices: true);
+        var fixture = await SeedPendingSummaryAsync(factory, $"weekly-summary-stale-event-{Guid.NewGuid():N}", 1);
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AgroPlanDbContext>();
+            var advisor = $"summary-stale-advisor-{Guid.NewGuid():N}";
+            db.Users.Add(new AgroPlan.Infrastructure.Identity.ApplicationUser
+            {
+                Id = advisor, UserName = advisor, NormalizedUserName = advisor.ToUpperInvariant(),
+                Email = $"{advisor}@example.test", NormalizedEmail = $"{advisor}@EXAMPLE.TEST", EmailConfirmed = true
+            });
+            var summary = await db.Set<WeeklySummary>().SingleAsync(x => x.Id == fixture.SummaryId,
+                TestContext.Current.CancellationToken);
+            summary.ShareWithAdvisor(advisor, fixture.RequestedByUserId, DateTimeOffset.UtcNow);
+            await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+        var provider = new CapturingNarrativeProvider((_, _) =>
+            throw new InvalidOperationException("Stale event must not invoke provider."));
+        var consumer = CreateConsumer(factory, provider);
+
+        await consumer.ProcessMessageAsync(fixture.EventId, fixture.Body, TestContext.Current.CancellationToken);
+
+        Assert.Equal(0, provider.CallCount);
+        await using var verify = factory.Services.CreateAsyncScope();
+        var stored = await verify.ServiceProvider.GetRequiredService<AgroPlanDbContext>().Set<WeeklySummary>()
+            .SingleAsync(x => x.Id == fixture.SummaryId, TestContext.Current.CancellationToken);
+        Assert.Equal(WeeklySummaryNarrativeStatus.Pending, stored.NarrativeStatus);
+        Assert.Equal(0, stored.NarrativeAttempts);
+        Assert.Single(JsonSerializer.Deserialize<WeeklySummaryProjection>(stored.ProjectionJson,
+            new JsonSerializerOptions(JsonSerializerDefaults.Web))!.Sources);
+    }
+
+    private static WeeklySummaryConsumer CreateConsumer(ApiTestFactory factory, IWeeklySummaryNarrativeProvider provider,
+        int maxAttempts = WeeklySummaryRetryOptions.DefaultMaximumAttempts) =>
         new(factory.Services.GetRequiredService<RabbitMqConnection>(), factory.Services.GetRequiredService<IServiceScopeFactory>(),
-            provider, NullLogger<WeeklySummaryConsumer>.Instance);
+            provider, NullLogger<WeeklySummaryConsumer>.Instance,
+            Options.Create(new WeeklySummaryRetryOptions { MaxAttempts = maxAttempts }));
 
     private static async Task<PendingSummaryFixture> SeedPendingSummaryAsync(ApiTestFactory factory, string owner, int sourceCount,
         string? unit = null, bool requestedByAdmin = false)
@@ -225,8 +324,10 @@ public sealed class WeeklySummaryConsumerTests(PostgreSqlFixture postgres)
         : IWeeklySummaryNarrativeProvider
     {
         public WeeklySummaryNarrativeInput? LastInput { get; private set; }
+        public int CallCount { get; private set; }
         public Task<WeeklySummaryNarrativeDraft> GenerateAsync(WeeklySummaryNarrativeInput input, CancellationToken cancellationToken)
         {
+            CallCount++;
             LastInput = input;
             return generate(input, cancellationToken);
         }
