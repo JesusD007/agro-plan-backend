@@ -2,18 +2,18 @@
 gsd_state_version: "1.0"
 current_phase: 4
 current_phase_name: Applied Farm Intelligence
-current_plan: 3
+current_plan: 4
 status: executing
-stopped_at: Completed 04-02-PLAN.md
-last_updated: "2026-11-11T15:25:49.688Z"
+stopped_at: Completed 04-03-PLAN.md
+last_updated: "2026-11-11T16:16:48.275Z"
 last_activity: 2026-11-11
 last_activity_desc: Phase 3 complete, transitioned to Phase 4
-state_head: 65ca9f1396939dd4d7c40a12472c334e4f1cada0
+state_head: aadaf9a82ff702b81e6a3994de2efef9d1062072
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 31
-  completed_plans: 29
+  completed_plans: 30
   percent: 50
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-11-09)
 ## Current Position
 
 Phase: 4 — Applied Farm Intelligence
-Current Plan: 3
+Current Plan: 4
 Total Plans in Phase: 4
 Status: Ready to execute
 Last activity: 2026-11-11 — Plan 04-02 complete; 04-03 is ready to execute
@@ -74,6 +74,7 @@ Progress: ████████░░ [█████░░░░░] 50%
 | Phase 03 P07 | 17min | 2 tasks | 5 files |
 | Phase 04-applied-farm-intelligence P01 | 45min | 2 tasks | 15 files |
 | Phase 04 P02 | 49m | 2 tasks | 13 files |
+| Phase 04 P03 | 38min | 2 tasks | 22 files |
 
 ## Accumulated Context
 
@@ -129,6 +130,8 @@ Progress: ████████░░ [█████░░░░░] 50%
 - [Phase 04]: Weekly summary anchors select Monday-Sunday in the configured farm time zone.
 - [Phase 04]: Provider narrative remains unavailable when no provider is registered, and no outbound job is created.
 - [Phase 04]: Advisor weekly summaries require a current Costs or Production grant; source rows are filtered and pending task details stay owner/admin-only.
+- [Phase 04]: Require explicit consent per photo before external observation; when provider is unconfigured, keep reports pending manually and do not enqueue AI jobs.
+- [Phase 04]: Only a pre-provisioned verified agronomist with current farm authorization can review; request-more-evidence preserves photos, while close/reject queues deletion.
 
 ### Pending Todos
 
@@ -147,6 +150,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-11T15:25:47.477Z
-Stopped at: Completed 04-02-PLAN.md
+Last session: 2026-11-11T16:16:46.061Z
+Stopped at: Completed 04-03-PLAN.md
 Resume file: None
