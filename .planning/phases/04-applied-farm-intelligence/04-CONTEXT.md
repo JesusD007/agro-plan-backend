@@ -28,10 +28,11 @@ Deliver the three Phase 4 backend capabilities: voice-based editable activity dr
 - **D-08:** Before agronomist review, AI may describe only visible signs and request additional photos; it must not give a diagnosis or treatment.
 - **D-09:** Only a verified agronomist explicitly assigned or authorized for the farm may confirm diagnosis or treatment. If evidence is insufficient, the agronomist requests more photos/data and the report remains pending.
 - **D-10:** Delete report photos when the review is closed or rejected, while retaining the report itself.
+- **D-11:** Keep voice processing behind a provider-neutral contract. Validate language support and choose the transcription provider before enabling production, especially for Haitian Creole; Gemini's current language documentation did not verify Creole support.
 
 ### Prior decisions that remain binding
 - AI outputs remain drafts and cannot confirm or mutate business records.
-- Keep AI integrations provider-neutral; Gemini remains the selected current provider behind the existing `IAiProposalProvider` abstraction.
+- Keep AI integrations provider-neutral. Gemini remains the current adapter for existing proposal workflows; Phase 4's voice provider must be validated and selected before enabling production.
 - Agronomic parameters and numeric rules require validated sources. Do not invent crop facts, quantitative recommendations, or safe-use values.
 - Check farm membership in PostgreSQL for every farm-scoped request. Advisor access remains read-only, scoped, revocable, and checked on every request.
 - PostgreSQL remains authoritative; keep the existing API/Worker, RabbitMQ outbox, and SignalR job-status patterns.

@@ -130,6 +130,10 @@
 
 - Technical language detection, transcription, structured output validation, cleanup job mechanics, privacy-minimized provider payloads, and AI evaluation methods.
 
+## Provider compatibility follow-up
+
+Google's current Gemini transcription language documentation did not confirm Haitian Creole support. The user selected a provider-neutral speech contract, with provider validation and selection required before activation. Do not silently ship Spanish-only support; the voice capability must meet both language requirements or remain unavailable until a compatible provider is selected.
+
 ## Deferred Ideas
 
 None.
