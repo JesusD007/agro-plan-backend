@@ -117,6 +117,8 @@ metrics:
 2. **Task 2: Cross-feature API and privacy regression coverage** - `c68eced` (RED tests/evidence), `d3860df` (operation approval gates)
 3. **Task 3: AI-SPEC offline reference fixtures and deterministic evaluations** - `f64bafe` (fixtures and tests)
 
+**Plan metadata:** `b2be962` (summary, roadmap, and GSD state update)
+
 ## Files Created/Modified
 
 - `src/AgroPlan.Worker/AppliedFarmIntelligenceWorkerRegistration.cs` - Default-off, operation-scoped activation and evidence gates.
@@ -166,7 +168,7 @@ metrics:
 - The rate-limit regression initially used `GET` for weekly summaries, but the controller only maps `POST` on the collection path. The test uses the actual `POST` route; it then passed at the 20/21 request boundary.
 - The test host stalled when run inside the restricted sandbox. Running the same .NET 10 commands with Docker/Testcontainers access completed normally.
 
-## Verification
+## Test Results
 
 - RED evidence: `gsd-tools check tdd-red-evidence .planning/debug/04-04-task2-red-evidence.json --raw` → `RED_EVIDENCE_OK`.
 - Focused Worker/API/privacy tests: 10 passed, 0 failed.
