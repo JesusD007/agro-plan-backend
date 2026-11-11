@@ -125,6 +125,11 @@ public sealed class WeeklySummaryConsumer(RabbitMqConnection connection, IServic
         WeeklySummaryNarrativeDraft draft;
         try { draft = await provider.GenerateAsync(input, cancellationToken); }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
+        catch (WeeklySummaryNarrativeProviderException exception) when (exception.FailureKind == WeeklySummaryNarrativeFailureKind.NotConfigured)
+        {
+            await FinalizeAsync(request, null, WeeklySummaryNarrativeStatus.Unavailable, [], cancellationToken);
+            return;
+        }
         catch (Exception ex)
         {
             logger.LogWarning("Weekly summary provider failed ({ExceptionType}).", ex.GetType().Name);

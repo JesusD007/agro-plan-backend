@@ -27,6 +27,7 @@ if (!string.IsNullOrWhiteSpace(rabbitMqUrl))
     {
         builder.Services.AddSingleton<IFileStorage, SupabaseFileStorage>();
         builder.Services.AddHostedService<SymptomPhotoCleanupService>();
+        builder.Services.AddHostedService<ExpiredVoiceAudioCleanupService>();
     }
     builder.Services.AddSingleton<IAiProposalProvider, GeminiProposalProvider>();
     builder.Services.AddSingleton<IClimateProvider, UnconfiguredClimateProvider>();
@@ -38,11 +39,7 @@ if (!string.IsNullOrWhiteSpace(rabbitMqUrl))
     builder.Services.AddHostedService<VerifiedWorkRewardsConsumer>();
     builder.Services.AddHostedService<ConfirmedRecordTaskImpactConsumer>();
     builder.Services.AddHostedService<TaskCalendarSyncConsumer>();
-    if (builder.Services.Any(descriptor => descriptor.ServiceType == typeof(IWeeklySummaryNarrativeProvider)))
-        builder.Services.AddHostedService<WeeklySummaryConsumer>();
-    if (builder.Services.Any(descriptor => descriptor.ServiceType == typeof(ISymptomObservationProvider)) &&
-        builder.Services.Any(descriptor => descriptor.ServiceType == typeof(IFileStorage)))
-        builder.Services.AddHostedService<SymptomObservationConsumer>();
+    AgroPlan.Worker.AppliedFarmIntelligenceWorkerRegistration.Register(builder.Services, builder.Configuration, builder.Environment.EnvironmentName);
 }
 else
 {

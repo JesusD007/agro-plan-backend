@@ -6,6 +6,18 @@ public interface IWeeklySummaryNarrativeProvider
     Task<WeeklySummaryNarrativeDraft> GenerateAsync(WeeklySummaryNarrativeInput input, CancellationToken cancellationToken);
 }
 
+public enum WeeklySummaryNarrativeFailureKind
+{
+    NotConfigured = 1,
+    TemporarilyUnavailable = 2
+}
+
+public sealed class WeeklySummaryNarrativeProviderException(WeeklySummaryNarrativeFailureKind failureKind)
+    : Exception("Weekly summary narrative provider is unavailable.")
+{
+    public WeeklySummaryNarrativeFailureKind FailureKind { get; } = failureKind;
+}
+
 public sealed record WeeklySummaryNarrativeInput(
     DateOnly WeekStartDate,
     DateOnly WeekEndDate,
