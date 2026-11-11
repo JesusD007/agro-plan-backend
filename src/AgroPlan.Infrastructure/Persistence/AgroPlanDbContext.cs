@@ -7,6 +7,7 @@ using AgroPlan.Domain.Operations;
 using AgroPlan.Domain.Safety;
 using AgroPlan.Domain.AdvisoryAccess;
 using AgroPlan.Domain.Workforce;
+using AgroPlan.Domain.Voice;
 using AgroPlan.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -56,6 +57,7 @@ public sealed class AgroPlanDbContext(DbContextOptions<AgroPlanDbContext> option
     public DbSet<WorkRoute> WorkRoutes => Set<WorkRoute>();
     public DbSet<TaskScheduleRevision> TaskScheduleRevisions => Set<TaskScheduleRevision>();
     public DbSet<CalendarDeliveryStatus> CalendarDeliveryStatuses => Set<CalendarDeliveryStatus>();
+    public DbSet<VoiceActivityDraft> VoiceActivityDrafts => Set<VoiceActivityDraft>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

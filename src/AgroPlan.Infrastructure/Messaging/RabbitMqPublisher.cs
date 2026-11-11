@@ -13,6 +13,7 @@ public sealed class RabbitMqPublisher(RabbitMqConnection connection)
     public const string ConfirmedRecordsQueueName = "agroplan.confirmed-records.v1";
     public const string TaskCalendarQueueName = "agroplan.task-calendar-sync.v1";
     public const string TaskScheduleNotificationsQueueName = "agroplan.task-schedule-notifications.v1";
+    public const string VoiceDraftsQueueName = "agroplan.voice-drafts.v1";
 
     public async Task PublishAsync(OutboxMessage message, CancellationToken cancellationToken)
     {
@@ -29,6 +30,7 @@ public sealed class RabbitMqPublisher(RabbitMqConnection connection)
             "farm-record.confirmed" => ConfirmedRecordsQueueName,
             "task-calendar.sync" => TaskCalendarQueueName,
             "task-schedule.changed" => TaskScheduleNotificationsQueueName,
+            "voice-draft.requested" => VoiceDraftsQueueName,
             _ => QueueName
         };
         await channel.QueueDeclareAsync(queueName, durable: true, exclusive: false, autoDelete: false, arguments: null, cancellationToken: cancellationToken);
@@ -78,5 +80,9 @@ public sealed class RabbitMqPublisher(RabbitMqConnection connection)
 
     public static Task EnsureTaskCalendarQueueAsync(IChannel channel, CancellationToken cancellationToken) =>
         channel.QueueDeclareAsync(TaskCalendarQueueName, durable: true, exclusive: false, autoDelete: false,
+            arguments: null, cancellationToken: cancellationToken);
+
+    public static Task EnsureVoiceDraftsQueueAsync(IChannel channel, CancellationToken cancellationToken) =>
+        channel.QueueDeclareAsync(VoiceDraftsQueueName, durable: true, exclusive: false, autoDelete: false,
             arguments: null, cancellationToken: cancellationToken);
 }

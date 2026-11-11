@@ -41,6 +41,13 @@ public sealed class SupabaseFileStorage(IConfiguration configuration) : IFileSto
         return CreateUploadAuthorization(key, contentType, expiresAt);
     }
 
+    public UploadAuthorization CreateVoiceDraftUploadAuthorization(Guid farmId, Guid draftId, string contentType,
+        DateTimeOffset expiresAt)
+    {
+        var key = $"farms/{farmId:D}/voice-drafts/{draftId:D}/staging";
+        return CreateUploadAuthorization(key, contentType, expiresAt);
+    }
+
     private UploadAuthorization CreateUploadAuthorization(string key, string contentType, DateTimeOffset expiresAt)
     {
         var url = _client.Value.GetPreSignedURL(new GetPreSignedUrlRequest
@@ -100,6 +107,44 @@ public sealed class SupabaseFileStorage(IConfiguration configuration) : IFileSto
         {
             return null;
         }
+    }
+
+    public async Task<byte[]?> ReadObjectAsync(string objectKey, long maximumSizeBytes, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(objectKey) || maximumSizeBytes is <= 0 or > 10 * 1024 * 1024)
+            throw new ArgumentOutOfRangeException(nameof(maximumSizeBytes));
+        try
+        {
+            using var response = await _client.Value.GetObjectAsync(new GetObjectRequest
+            {
+                BucketName = _bucket,
+                Key = objectKey
+            }, cancellationToken);
+            if (response.Headers.ContentLength is <= 0 || response.Headers.ContentLength > maximumSizeBytes)
+                throw new InvalidDataException("Stored media exceeds the authorized size limit.");
+            await using var output = new MemoryStream(checked((int)response.Headers.ContentLength));
+            var buffer = new byte[81920];
+            while (true)
+            {
+                var read = await response.ResponseStream.ReadAsync(buffer, cancellationToken);
+                if (read == 0) break;
+                if (output.Length + read > maximumSizeBytes)
+                    throw new InvalidDataException("Stored media exceeds the authorized size limit.");
+                await output.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
+            }
+            return output.ToArray();
+        }
+        catch (AmazonS3Exception exception) when (exception.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+    }
+
+    public async Task DeleteAsync(string objectKey, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(objectKey) || objectKey.Length > 1024)
+            throw new ArgumentException("A private storage object key is required.", nameof(objectKey));
+        await _client.Value.DeleteObjectAsync(new DeleteObjectRequest { BucketName = _bucket, Key = objectKey }, cancellationToken);
     }
 
     public void Dispose() { if (_client.IsValueCreated) _client.Value.Dispose(); }

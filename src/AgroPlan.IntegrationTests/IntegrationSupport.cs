@@ -140,6 +140,9 @@ internal sealed record SentEmail(string Recipient, string Subject, string TextBo
 internal sealed class RecordingFileStorage : IFileStorage
 {
     private const long FileSize = 512;
+    private static readonly byte[] VoiceWave = CreateWave();
+    private readonly ConcurrentQueue<string> _deletedObjectKeys = new();
+    public IReadOnlyList<string> DeletedObjectKeys => _deletedObjectKeys.ToArray();
 
     public UploadAuthorization CreateUploadAuthorization(Guid farmId, Guid entryId, Guid attachmentId,
         string contentType, DateTimeOffset expiresAt) => new(
@@ -151,15 +154,56 @@ internal sealed class RecordingFileStorage : IFileStorage
         $"farms/{farmId:D}/work-tasks/{taskId:D}/evidence/{submissionId:D}/staging",
         $"https://uploads.invalid/{submissionId:D}", expiresAt, contentType);
 
+    public UploadAuthorization CreateVoiceDraftUploadAuthorization(Guid farmId, Guid draftId, string contentType,
+        DateTimeOffset expiresAt) => new(
+        $"farms/{farmId:D}/voice-drafts/{draftId:D}/staging",
+        $"https://uploads.invalid/{draftId:D}", expiresAt, contentType);
+
     public UploadAuthorization CreateDownloadAuthorization(string objectKey, DateTimeOffset expiresAt) => new(
         objectKey, $"https://downloads.invalid/{Uri.EscapeDataString(objectKey)}", expiresAt, "image/png");
 
     public Task<StoredObjectMetadata?> GetMetadataAsync(string objectKey, CancellationToken cancellationToken) =>
-        Task.FromResult<StoredObjectMetadata?>(new StoredObjectMetadata(FileSize, "image/png"));
+        Task.FromResult<StoredObjectMetadata?>(objectKey.Contains("/voice-drafts/", StringComparison.Ordinal)
+            ? new StoredObjectMetadata(VoiceWave.Length, "audio/wav")
+            : new StoredObjectMetadata(FileSize, "image/png"));
+
+    public Task<byte[]?> ReadObjectAsync(string objectKey, long maximumSizeBytes, CancellationToken cancellationToken) =>
+        Task.FromResult<byte[]?>(objectKey.Contains("/voice-drafts/", StringComparison.Ordinal) && VoiceWave.Length <= maximumSizeBytes
+            ? [.. VoiceWave]
+            : null);
 
     public Task<FinalizedStoredObject?> FinalizeUploadAsync(string stagingObjectKey, string finalObjectKey,
-        CancellationToken cancellationToken) => Task.FromResult<FinalizedStoredObject?>(
-            new FinalizedStoredObject(finalObjectKey, new StoredObjectMetadata(FileSize, "image/png")));
+        CancellationToken cancellationToken)
+    {
+        var voice = stagingObjectKey.Contains("/voice-drafts/", StringComparison.Ordinal);
+        return Task.FromResult<FinalizedStoredObject?>(new FinalizedStoredObject(finalObjectKey,
+            voice ? new StoredObjectMetadata(VoiceWave.Length, "audio/wav") : new StoredObjectMetadata(FileSize, "image/png")));
+    }
+
+    public Task DeleteAsync(string objectKey, CancellationToken cancellationToken)
+    {
+        _deletedObjectKeys.Enqueue(objectKey);
+        return Task.CompletedTask;
+    }
+
+    private static byte[] CreateWave()
+    {
+        const int dataLength = 32000;
+        var bytes = new byte[44 + dataLength];
+        System.Text.Encoding.ASCII.GetBytes("RIFF").CopyTo(bytes, 0);
+        BitConverter.GetBytes(bytes.Length - 8).CopyTo(bytes, 4);
+        System.Text.Encoding.ASCII.GetBytes("WAVEfmt ").CopyTo(bytes, 8);
+        BitConverter.GetBytes(16).CopyTo(bytes, 16);
+        BitConverter.GetBytes((short)1).CopyTo(bytes, 20);
+        BitConverter.GetBytes((short)1).CopyTo(bytes, 22);
+        BitConverter.GetBytes(16000).CopyTo(bytes, 24);
+        BitConverter.GetBytes(32000).CopyTo(bytes, 28);
+        BitConverter.GetBytes((short)2).CopyTo(bytes, 32);
+        BitConverter.GetBytes((short)16).CopyTo(bytes, 34);
+        System.Text.Encoding.ASCII.GetBytes("data").CopyTo(bytes, 36);
+        BitConverter.GetBytes(dataLength).CopyTo(bytes, 40);
+        return bytes;
+    }
 }
 
 internal static class DockerAvailability

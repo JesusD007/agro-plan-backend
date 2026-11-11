@@ -8,7 +8,10 @@ public interface IFileStorage
 {
     UploadAuthorization CreateUploadAuthorization(Guid farmId, Guid entryId, Guid attachmentId, string contentType, DateTimeOffset expiresAt);
     UploadAuthorization CreateTaskEvidenceUploadAuthorization(Guid farmId, Guid taskId, Guid submissionId, string contentType, DateTimeOffset expiresAt);
+    UploadAuthorization CreateVoiceDraftUploadAuthorization(Guid farmId, Guid draftId, string contentType, DateTimeOffset expiresAt);
     UploadAuthorization CreateDownloadAuthorization(string objectKey, DateTimeOffset expiresAt);
     Task<StoredObjectMetadata?> GetMetadataAsync(string objectKey, CancellationToken cancellationToken);
+    Task<byte[]?> ReadObjectAsync(string objectKey, long maximumSizeBytes, CancellationToken cancellationToken);
     Task<FinalizedStoredObject?> FinalizeUploadAsync(string stagingObjectKey, string finalObjectKey, CancellationToken cancellationToken);
+    Task DeleteAsync(string objectKey, CancellationToken cancellationToken);
 }

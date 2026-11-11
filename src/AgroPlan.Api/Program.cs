@@ -27,6 +27,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using Scalar.AspNetCore;
 using System.Threading.RateLimiting;
+using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -128,6 +129,18 @@ builder.Services.AddScoped<ConfirmProposal>();
 builder.Services.AddSingleton<IFileStorage, SupabaseFileStorage>();
 builder.Services.AddRateLimiter(options =>
 {
+    options.AddPolicy("phase4-media", httpContext =>
+    {
+        var userId = httpContext.User.FindFirstValue("sub") ?? httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "unknown-user";
+        var farmId = httpContext.Request.RouteValues["farmId"]?.ToString() ?? "unknown-farm";
+        return RateLimitPartition.GetFixedWindowLimiter($"{userId}:{farmId}", _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 10,
+            Window = TimeSpan.FromHours(1),
+            QueueLimit = 0,
+            AutoReplenishment = true
+        });
+    });
     options.AddPolicy("identity", httpContext => RateLimitPartition.GetFixedWindowLimiter(
         httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown-client",
         _ => new FixedWindowRateLimiterOptions
