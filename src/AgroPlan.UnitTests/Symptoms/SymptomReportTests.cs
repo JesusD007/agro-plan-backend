@@ -70,7 +70,7 @@ public sealed class SymptomReportTests
     {
         var report = CreateReport();
         var photo = CreatePhoto(consent: true);
-        photo.Finalize("private/report/photo", OnePixelPng.Length, DateTimeOffset.UtcNow);
+        photo.Finalize("private/report/photo", OnePixelPng.Length, 1, 1, DateTimeOffset.UtcNow);
         report.AddPhoto(photo);
         report.Submit(DateTimeOffset.UtcNow);
         return report;

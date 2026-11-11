@@ -82,7 +82,13 @@ public sealed class SymptomReportsController(AgroPlanDbContext db, IFileStorage 
         var aggregatePixels = 0L;
         foreach (var photo in report.Photos)
         {
-            if (photo.FinalizedAt.HasValue) { aggregatePixels += SymptomPhotoInspector.MaximumPixelsPerImage; continue; }
+            if (photo.FinalizedAt.HasValue)
+            {
+                aggregatePixels += photo.WidthPixels.HasValue && photo.HeightPixels.HasValue
+                    ? (long)photo.WidthPixels.Value * photo.HeightPixels.Value
+                    : SymptomPhotoInspector.MaximumPixelsPerImage;
+                continue;
+            }
             if (photo.ExpiresAt < now) return BadRequest(new { code = "SYMPTOM_UPLOAD_EXPIRED" });
             var metadata = await storage.GetMetadataAsync(photo.UploadObjectKey, ct);
             if (metadata is null || metadata.ContentType != photo.ContentType || metadata.SizeBytes != photo.ExpectedSizeBytes ||
@@ -98,7 +104,7 @@ public sealed class SymptomReportsController(AgroPlanDbContext db, IFileStorage 
             var finalized = await storage.FinalizeUploadAsync(photo.UploadObjectKey, finalKey, ct);
             if (finalized is null || finalized.Metadata.ContentType != photo.ContentType || finalized.Metadata.SizeBytes != photo.ExpectedSizeBytes)
                 return BadRequest(new { code = "SYMPTOM_PHOTO_FINALIZATION_FAILED" });
-            photo.Finalize(finalized.ObjectKey, finalized.Metadata.SizeBytes, now);
+            photo.Finalize(finalized.ObjectKey, finalized.Metadata.SizeBytes, dimensions.Width, dimensions.Height, now);
         }
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
         // Membership can be revoked while private media is being finalized; re-read it

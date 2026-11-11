@@ -36,7 +36,7 @@ public sealed class SymptomReportCleanupTests(PostgreSqlFixture postgres)
             var privateKey = $"private/{Guid.NewGuid():N}/final";
             var photo = new SymptomReportPhoto(photoId, $"private/{Guid.NewGuid():N}/staging", "image/png", 512,
                 ownerId, true, "symptom-ai-v1", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddMinutes(10));
-            photo.Finalize(privateKey, 512, DateTimeOffset.UtcNow);
+            photo.Finalize(privateKey, 512, 1, 1, DateTimeOffset.UtcNow);
             report.AddPhoto(photo);
             report.Submit(DateTimeOffset.UtcNow);
             reportId = report.Id;
@@ -90,7 +90,7 @@ public sealed class SymptomReportCleanupTests(PostgreSqlFixture postgres)
             var report = new SymptomReport(Guid.NewGuid(), farmId, ownerId, null, null, DateTimeOffset.UtcNow);
             var photo = new SymptomReportPhoto(Guid.NewGuid(), objectKey + "/staging", "image/png", 512,
                 ownerId, false, null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddMinutes(10));
-            photo.Finalize(objectKey, 512, DateTimeOffset.UtcNow);
+            photo.Finalize(objectKey, 512, 1, 1, DateTimeOffset.UtcNow);
             report.AddPhoto(photo);
             report.Submit(DateTimeOffset.UtcNow);
             report.AddDecision(new SymptomReportDecision(Guid.NewGuid(), SymptomReviewAction.Rejected, ownerId, DateTimeOffset.UtcNow));

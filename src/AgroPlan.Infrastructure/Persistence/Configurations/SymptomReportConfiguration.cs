@@ -44,6 +44,8 @@ public sealed class SymptomReportConfiguration : IEntityTypeConfiguration<Sympto
             photo.Property(item => item.ObjectKey).HasMaxLength(1024);
             photo.Property(item => item.ContentType).HasMaxLength(64).IsRequired();
             photo.Property(item => item.ExpectedSizeBytes).IsRequired();
+            photo.Property(item => item.WidthPixels);
+            photo.Property(item => item.HeightPixels);
             photo.Property(item => item.ConsentActorUserId).HasMaxLength(450).IsRequired();
             photo.Property(item => item.ConsentNoticeVersion).HasMaxLength(80);
             photo.Property(item => item.DeleteLastError).HasMaxLength(80);

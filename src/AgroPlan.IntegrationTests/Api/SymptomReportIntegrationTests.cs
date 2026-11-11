@@ -172,7 +172,7 @@ public sealed class SymptomReportIntegrationTests(PostgreSqlFixture postgres)
             var report = new SymptomReport(Guid.NewGuid(), farmId, ownerId, null, "Initial notes", DateTimeOffset.UtcNow);
             var originalPhoto = new SymptomReportPhoto(Guid.NewGuid(), "private/original-staging", "image/png", 512,
                 ownerId, false, null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddMinutes(10));
-            originalPhoto.Finalize("private/original-final", 512, DateTimeOffset.UtcNow);
+            originalPhoto.Finalize("private/original-final", 512, 1, 1, DateTimeOffset.UtcNow);
             report.AddPhoto(originalPhoto);
             report.Submit(DateTimeOffset.UtcNow);
             report.AddDecision(new SymptomReportDecision(Guid.NewGuid(), SymptomReviewAction.MoreEvidenceRequested,
@@ -220,6 +220,61 @@ public sealed class SymptomReportIntegrationTests(PostgreSqlFixture postgres)
     }
 
     [Fact]
+    public async Task Finalization_retry_uses_persisted_dimensions_for_already_finalized_photos()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        postgres.EnsureAvailable();
+        await using var factory = new ApiTestFactory(postgres.ConnectionString);
+        using var client = factory.CreateClient();
+        var ownerId = $"symptom-pixels-owner-{Guid.NewGuid():N}";
+        Guid farmId;
+        Guid reportId;
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AgroPlan.Infrastructure.Persistence.AgroPlanDbContext>();
+            (farmId, _) = await TestData.SeedFarmAsync(db, ownerId);
+            var report = new SymptomReport(Guid.NewGuid(), farmId, ownerId, null, null, DateTimeOffset.UtcNow);
+            for (var index = 0; index < 3; index++)
+            {
+                var photo = new SymptomReportPhoto(Guid.NewGuid(), $"private/{index}/staging", "image/png", 512,
+                    ownerId, false, null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddMinutes(10));
+                photo.Finalize($"private/{index}/final", 512, 4000, 3750, DateTimeOffset.UtcNow);
+                report.AddPhoto(photo);
+            }
+            reportId = report.Id;
+            db.Add(report);
+            await db.SaveChangesAsync(ct);
+        }
+
+        TestData.SetBearer(client, ownerId);
+        using var upload = await client.PostAsJsonAsync($"/api/farms/{farmId}/symptom-reports/upload-authorizations", new
+        {
+            reportId,
+            cropCycleId = (Guid?)null,
+            contentType = "image/png",
+            sizeBytes = 512L,
+            externalProcessingConsent = false,
+            consentNoticeVersion = (string?)null
+        }, ct);
+        Assert.Equal(HttpStatusCode.OK, upload.StatusCode);
+        using var uploadJson = JsonDocument.Parse(await upload.Content.ReadAsStringAsync(ct));
+        var newPhotoId = uploadJson.RootElement.GetProperty("photoId").GetGuid();
+
+        using var finalize = await client.PostAsJsonAsync($"/api/farms/{farmId}/symptom-reports", new { reportId }, ct);
+        Assert.True(finalize.StatusCode == HttpStatusCode.Accepted,
+            $"Expected accepted finalization using 45 million stored pixels; got {(int)finalize.StatusCode}: {await finalize.Content.ReadAsStringAsync(ct)}");
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AgroPlan.Infrastructure.Persistence.AgroPlanDbContext>();
+            var report = await db.Set<SymptomReport>().Include(x => x.Photos).SingleAsync(x => x.Id == reportId, ct);
+            var photo = Assert.Single(report.Photos, item => item.Id == newPhotoId);
+            Assert.True(photo.FinalizedAt.HasValue);
+            Assert.True(photo.WidthPixels.HasValue && photo.WidthPixels.Value > 0);
+            Assert.True(photo.HeightPixels.HasValue && photo.HeightPixels.Value > 0);
+        }
+    }
+
+    [Fact]
     public async Task Only_currently_verified_and_assigned_agronomist_can_review_and_read_private_photos()
     {
         var ct = TestContext.Current.CancellationToken;
@@ -247,7 +302,7 @@ public sealed class SymptomReportIntegrationTests(PostgreSqlFixture postgres)
             var report = new SymptomReport(Guid.NewGuid(), farmId, ownerId, null, null, DateTimeOffset.UtcNow);
             var photo = new SymptomReportPhoto(Guid.NewGuid(), "private/staging", "image/png", 512,
                 ownerId, false, null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddMinutes(10));
-            photo.Finalize("private/final", 512, DateTimeOffset.UtcNow);
+            photo.Finalize("private/final", 512, 1, 1, DateTimeOffset.UtcNow);
             report.AddPhoto(photo);
             report.Submit(DateTimeOffset.UtcNow);
             reportId = report.Id;

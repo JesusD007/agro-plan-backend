@@ -207,6 +207,8 @@ public sealed class SymptomReportPhoto
     public string ContentType { get; private set; } = string.Empty;
     public long ExpectedSizeBytes { get; private set; }
     public long? SizeBytes { get; private set; }
+    public int? WidthPixels { get; private set; }
+    public int? HeightPixels { get; private set; }
     public string ConsentActorUserId { get; private set; } = string.Empty;
     public bool ConsentGranted { get; private set; }
     public string? ConsentNoticeVersion { get; private set; }
@@ -221,18 +223,25 @@ public sealed class SymptomReportPhoto
     public int DeleteAttempts { get; private set; }
     public string? DeleteLastError { get; private set; }
 
-    public void Finalize(string objectKey, long sizeBytes, DateTimeOffset at)
+    public void Finalize(string objectKey, long sizeBytes, int widthPixels, int heightPixels, DateTimeOffset at)
     {
         if (FinalizedAt.HasValue)
         {
-            if (!string.Equals(ObjectKey, objectKey, StringComparison.Ordinal) || SizeBytes != sizeBytes)
+            if (!string.Equals(ObjectKey, objectKey, StringComparison.Ordinal) || SizeBytes != sizeBytes ||
+                WidthPixels != widthPixels || HeightPixels != heightPixels)
                 throw new InvalidOperationException("Photo is already finalized with different metadata.");
             return;
         }
         if (string.IsNullOrWhiteSpace(objectKey) || objectKey.Length > 1024) throw new ArgumentException("Private photo key is required.", nameof(objectKey));
         if (sizeBytes != ExpectedSizeBytes) throw new InvalidOperationException("Photo size does not match its upload authorization.");
+        if (widthPixels is <= 0 or > SymptomPhotoInspector.MaximumEdgePixels ||
+            heightPixels is <= 0 or > SymptomPhotoInspector.MaximumEdgePixels ||
+            (long)widthPixels * heightPixels > SymptomPhotoInspector.MaximumPixelsPerImage)
+            throw new ArgumentOutOfRangeException(nameof(widthPixels), "Photo dimensions exceed the validated image limits.");
         ObjectKey = objectKey;
         SizeBytes = sizeBytes;
+        WidthPixels = widthPixels;
+        HeightPixels = heightPixels;
         FinalizedAt = at;
     }
 
