@@ -245,20 +245,20 @@ public sealed class VoiceDraftsController(AgroPlanDbContext db, IFileStorage sto
 }
 
 public sealed record CreateVoiceUploadAuthorizationRequest(
-    [property: Required] Guid ParcelId,
+    [param: Required] Guid ParcelId,
     Guid? CropCycleId,
     Guid? WorkTaskId,
-    [property: Required] string Language,
-    [property: Required] string ContentType,
-    [property: Range(1, 10485760)] long SizeBytes,
+    [param: Required] string Language,
+    [param: Required] string ContentType,
+    [param: Range(1, 10485760)] long SizeBytes,
     bool ConsentToExternalProcessing,
-    [property: Required, StringLength(80, MinimumLength = 1)] string ConsentNoticeVersion);
+    [param: Required, StringLength(80, MinimumLength = 1)] string ConsentNoticeVersion);
 
 public sealed record VoiceUploadAuthorizationResponse(Guid DraftId, string SignedUrl, DateTimeOffset ExpiresAt,
     string ContentType, long SizeBytes);
-public sealed record FinalizeVoiceDraftRequest([property: Required] Guid UploadAuthorizationId);
-public sealed record EditVoiceDraftRequest(long ExpectedVersion, [property: Required] LogbookActivityType ActivityType,
-    [property: Required] DateTimeOffset OccurredAt, [property: Required, StringLength(4000, MinimumLength = 1)] string Details);
+public sealed record FinalizeVoiceDraftRequest([param: Required] Guid UploadAuthorizationId);
+public sealed record EditVoiceDraftRequest(long ExpectedVersion, [param: Required] LogbookActivityType ActivityType,
+    [param: Required] DateTimeOffset OccurredAt, [param: Required, StringLength(4000, MinimumLength = 1)] string Details);
 public sealed record ConfirmVoiceDraftRequest(long ExpectedVersion);
 public sealed record VoiceActivityDraftResponse(Guid Id, Guid FarmId, Guid? WorkTaskId, Guid ParcelId,
     Guid? CropCycleId, string Status, SpeechLanguage Language, string? ActivityType, DateTimeOffset? OccurredAt,
