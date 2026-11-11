@@ -5,6 +5,7 @@ using AgroPlan.Domain.AdvisoryAccess;
 using AgroPlan.Domain.Crops;
 using AgroPlan.Domain.Farms;
 using AgroPlan.Domain.Operations;
+using AgroPlan.Domain.Reports;
 using AgroPlan.Domain.Workforce;
 using AgroPlan.Infrastructure.Identity;
 using AgroPlan.Infrastructure.Persistence;
@@ -188,6 +189,64 @@ public sealed class WeeklySummaryTests(PostgreSqlFixture postgres)
             $"/api/farms/{farmId}/weekly-summaries/{summaryId}/sources/{sharedSourceId}", ct);
         Assert.Equal(HttpStatusCode.Forbidden, revokedRead.StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, revokedSourceRead.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(AdvisorReportScope.Costs, "ungranted-production-secret")]
+    [InlineData(AdvisorReportScope.Production, "ungranted-cost-secret")]
+    public async Task Advisor_never_receives_unfiltered_narrative_for_a_single_scope_grant(
+        AdvisorReportScope scopeType, string hiddenFact)
+    {
+        var ct = TestContext.Current.CancellationToken;
+        postgres.EnsureAvailable();
+        await using var factory = new ApiTestFactory(postgres.ConnectionString);
+        using var ownerClient = factory.CreateClient();
+        using var advisorClient = factory.CreateClient();
+        var owner = $"weekly-summary-narrative-owner-{Guid.NewGuid():N}";
+        var advisor = $"weekly-summary-narrative-advisor-{Guid.NewGuid():N}";
+        var now = DateTimeOffset.UtcNow;
+        Guid farmId;
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AgroPlanDbContext>();
+            (farmId, _) = await TestData.SeedFarmAsync(db, owner, withParcel: false);
+            db.Users.Add(new ApplicationUser
+            {
+                Id = advisor, UserName = $"{advisor}@example.test", NormalizedUserName = $"{advisor}@EXAMPLE.TEST",
+                Email = $"{advisor}@example.test", NormalizedEmail = $"{advisor}@EXAMPLE.TEST", EmailConfirmed = true
+            });
+            var settings = new FarmWorkerSettings(farmId);
+            settings.SetTimeZone("America/Santo_Domingo");
+            db.FarmWorkerSettings.Add(settings);
+            db.AdvisorAccessGrants.Add(new AdvisorAccessGrant(Guid.NewGuid(), farmId, advisor, [scopeType], owner,
+                "Single-scope narrative test", now.AddMinutes(-1), now.AddDays(10), now));
+            await db.SaveChangesAsync(ct);
+        }
+
+        TestData.SetBearer(ownerClient, owner);
+        TestData.SetBearer(advisorClient, advisor);
+        using var created = await ownerClient.PostAsJsonAsync($"/api/farms/{farmId}/weekly-summaries",
+            new { weekAnchorDate = new DateOnly(2026, 11, 9), cropCycleId = (Guid?)null }, ct);
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        using var createdJson = JsonDocument.Parse(await created.Content.ReadAsStringAsync(ct));
+        var summaryId = createdJson.RootElement.GetProperty("id").GetGuid();
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AgroPlanDbContext>();
+            var summary = await db.Set<WeeklySummary>().SingleAsync(x => x.Id == summaryId, ct);
+            summary.SetNarrative($"The unrestricted narrative contains {hiddenFact}.",
+                WeeklySummaryNarrativeStatus.Available);
+            await db.SaveChangesAsync(ct);
+        }
+        using var shared = await ownerClient.PostAsJsonAsync($"/api/farms/{farmId}/weekly-summaries/{summaryId}/share",
+            new { advisorUserId = advisor }, ct);
+        Assert.Equal(HttpStatusCode.NoContent, shared.StatusCode);
+
+        using var advisorRead = await advisorClient.GetAsync($"/api/farms/{farmId}/weekly-summaries/{summaryId}", ct);
+        Assert.Equal(HttpStatusCode.OK, advisorRead.StatusCode);
+        using var advisorJson = JsonDocument.Parse(await advisorRead.Content.ReadAsStringAsync(ct));
+        Assert.Null(advisorJson.RootElement.GetProperty("narrativeText").GetString());
+        Assert.DoesNotContain(hiddenFact, advisorJson.RootElement.ToString(), StringComparison.Ordinal);
     }
 }
 

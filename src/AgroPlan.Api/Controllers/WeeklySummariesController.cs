@@ -145,7 +145,7 @@ public sealed class WeeklySummariesController(AgroPlanDbContext db, IFarmAuthori
         grant.RecordUse(DateTimeOffset.UtcNow);
         await db.SaveChangesAsync(ct);
         return Ok(new AdvisorWeeklySummaryResponse(summary.Id, summary.WeekStartDate, summary.WeekEndDate,
-            summary.TimeZoneId, summary.NarrativeStatus.ToString(), summary.NarrativeText, advisorProjection));
+            summary.TimeZoneId, summary.NarrativeStatus.ToString(), null, advisorProjection));
     }
 
     [HttpPost("{summaryId:guid}/share")]
