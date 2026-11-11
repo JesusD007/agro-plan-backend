@@ -94,7 +94,12 @@ Plans:
   1. A voice recording can produce an editable activity draft with missing fields identified, and no logbook record is created until the user confirms it.
   2. A weekly summary is based on confirmed records and pending tasks, identifies missing data, and lets the user trace calculated totals to their source records.
   3. A photo-based symptoms report is clearly advisory and requires agronomist confirmation before presenting a diagnosis or treatment as approved.
-**Plans**: TBD
+**Plans:** 4 plans
+Plans:
+- [ ] 04-01-PLAN.md — provider-neutral voice drafts, explicit confirmation, and audio retention
+- [ ] 04-02-PLAN.md — farm-week summaries and scoped advisor sharing
+- [ ] 04-03-PLAN.md — private symptom reports and verified agronomist review
+- [ ] 04-04-PLAN.md — provider-gated Worker registration and cross-feature API coverage
 
 ### Phase 5: Marketplace and Traceability
 **Goal**: Producers and buyers can publish, discover, negotiate, and complete produce transactions with accurate lot availability and evidence-based traceability.
