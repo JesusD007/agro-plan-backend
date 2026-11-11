@@ -2,17 +2,18 @@
 gsd_state_version: "1.0"
 current_phase: 4
 current_phase_name: Applied Farm Intelligence
-status: planning
-stopped_at: Completed 04-01-PLAN.md
-last_updated: "2026-11-11T14:19:10.568Z"
-last_activity: 2026-11-10
+current_plan: 3
+status: executing
+stopped_at: Completed 04-02-PLAN.md
+last_updated: "2026-11-11T15:25:49.688Z"
+last_activity: 2026-11-11
 last_activity_desc: Phase 3 complete, transitioned to Phase 4
-state_head: 1e0f0cb84293f4e0a9f579ef677a237890c528e8
+state_head: 65ca9f1396939dd4d7c40a12472c334e4f1cada0
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 31
-  completed_plans: 28
+  completed_plans: 29
   percent: 50
 ---
 
@@ -28,9 +29,9 @@ See: .planning/PROJECT.md (updated 2026-11-09)
 ## Current Position
 
 Phase: 4 — Applied Farm Intelligence
-Current Plan: 2
+Current Plan: 3
 Total Plans in Phase: 4
-Status: In progress
+Status: Ready to execute
 Last activity: 2026-11-11 — Plan 04-01 implemented; 04-02 is next in wave 1
 
 Progress: ████████░░ [█████░░░░░] 50%
@@ -72,6 +73,7 @@ Progress: ████████░░ [█████░░░░░] 50%
 | Phase 03 P06 | 30m | 3 tasks | 32 files |
 | Phase 03 P07 | 17min | 2 tasks | 5 files |
 | Phase 04-applied-farm-intelligence P01 | 45min | 2 tasks | 15 files |
+| Phase 04 P02 | 49m | 2 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -124,6 +126,9 @@ Progress: ████████░░ [█████░░░░░] 50%
 - [Phase 04-applied-farm-intelligence]: Use a provider-neutral speech interface; keep production speech disabled until both Spanish and Creole gates pass.
 - [Phase 04-applied-farm-intelligence]: Require consent per recording and recheck membership, assignment, and consent before processing and publishing.
 - [Phase 04-applied-farm-intelligence]: Only authorized explicit confirmation appends the immutable logbook entry; delete media at confirmation or seven-day expiry.
+- [Phase 04]: Weekly summary anchors select Monday-Sunday in the configured farm time zone.
+- [Phase 04]: Provider narrative remains unavailable when no provider is registered, and no outbound job is created.
+- [Phase 04]: Advisor weekly summaries require a current Costs or Production grant; source rows are filtered and pending task details stay owner/admin-only.
 
 ### Pending Todos
 
@@ -142,6 +147,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-11T14:19:08.362Z
-Stopped at: Completed 04-01-PLAN.md
+Last session: 2026-11-11T15:25:47.477Z
+Stopped at: Completed 04-02-PLAN.md
 Resume file: None
