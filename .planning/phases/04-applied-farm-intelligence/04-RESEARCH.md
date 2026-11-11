@@ -283,30 +283,30 @@ Treat this as implementation guidance; confirm timezone storage format and inval
 | A6 | The exact time-zone identifier mapping, invalid-zone handling, summary freshness/versioning, byte-size media caps, and image count/format limits are implementation details not specified in the context. The five-minute audio duration and media deletion conditions are already locked. | Patterns | Affects API validation, migrations, projection consistency and storage cost; does not change the locked product rules. |
 | A7 | Provider data processing, deployment region, paid-service terms, and lawful basis/notice for worker audio and farm photos require project-owner/privacy review before production media is sent. | Pitfalls | Incorrect vendor/consent posture can expose sensitive personal or farm data. |
 
-## Open Questions
+## Open Questions — All Resolved or Gated
 
-Only question 1 is a production activation gate. Questions 2–4 are implementation details for planning and do not reopen the locked five-minute voice duration, Monday–Sunday farm-local calendar, or photo/audio deletion conditions.
+All questions now have explicit disposition. Q1 is **RESOLVED as a production activation gate**: provider selection/validation remains a required gate, not an implementation task to guess. Q2–Q4 are **RESOLVED in the implementation plans** as fail-closed defaults and limits; none reopens the locked five-minute voice duration, Monday–Sunday farm-local calendar, or photo/audio deletion conditions.
 
-1. **Which speech provider and production configuration pass the language gate?**
+1. **[RESOLVED — production gate retained] Which speech provider and production configuration pass the language gate?**
    - What we know: User selected a neutral contract and explicitly requires validation before activation; the phase context requires Dominican Spanish and Haitian Creole.
    - What's unclear: Supported language/locale for the exact transcription operation, dialect/code-switch quality, deployment region, data use, price and operational SLA.
    - Recommendation: Keep the provider unselected in code configuration until provider comparison and bilingual, human-labeled field-audio evaluation are approved. This is the principal production activation gate.
-2. **Which timezone identifier mapping and invalid-zone behavior fit the existing farm configuration? (Implementation detail; Monday–Sunday in farm-local time is locked.)**
+ 2. **[RESOLVED — use `FarmWorkerSettings.TimeZoneId`; missing/invalid IDs return explicit unavailable state] Which timezone identifier mapping and invalid-zone behavior fit the existing farm configuration? (Implementation detail; Monday–Sunday in farm-local time is locked.)**
    - What we know: Weekly calendar is farm-local Monday–Sunday.
    - What's unclear: IANA vs Windows IDs and how the existing model handles DST/invalid IDs.
-   - Recommendation: Inspect farm configuration and standardize an explicit mapping at planning; test DST boundaries and invalid/missing values. This does not reopen the calendar-week decision.
-3. **What is the lifecycle policy when authorization changes during asynchronous processing? (Implementation detail; per-request authorization is locked.)**
+    - Recommendation: Use the configured farm time-zone identifier for week boundaries; reject missing or invalid identifiers with an explicit unavailable/missing-configuration result and test daylight-saving boundaries. This does not reopen the calendar-week decision.
+ 3. **[RESOLVED — cancel queued work and discard in-flight output] What is the lifecycle policy when authorization changes during asynchronous processing? (Implementation detail; per-request authorization is locked.)**
    - What we know: API checks membership for every request, and advisors/agronomists need current scoped authority.
    - What's unclear: Whether an already queued result is discarded or retained privately after worker assignment/grant revocation.
-   - Recommendation: Re-check before any user-visible read/write; define queued-job cancellation/discard behavior and avoid provider requests if authority is no longer valid.
-4. **What byte/image-count and summary projection limits should complement the locked five-minute audio duration cap? (Implementation detail.)**
+    - Recommendation: Recheck live membership, assignment, grant, verification, and per-object consent before media retrieval/provider invocation and before publishing; cancel queued work when authority is revoked and discard any in-flight response. No provider call or user-visible draft/report is allowed after the failed recheck.
+ 4. **[RESOLVED — 10 MiB audio/photo limits, five photos, 500 summary rows, 64 KiB input and 16 KiB output] What byte/image-count and summary projection limits should complement the locked five-minute audio duration cap? (Implementation detail.)**
    - What we know: Voice recordings are capped at five minutes; audio and symptom-photo deletion conditions are already fixed in D-04 and D-10; media remains private.
    - What's unclear: Byte, image-count, dimension, request-rate and summary source caps.
-   - Recommendation: Specify server-side byte/count limits and partial/unavailable behavior before implementation; do not silently truncate source evidence. This is not an open decision about audio duration or deletion timing.
+    - Recommendation: Enforce 10 MiB per audio recording and photo, at most five photos, 8,192 pixels per edge, 20 megapixels per image and 50 megapixels per report, 500 summary source rows, 64 KiB narrative input and 16 KiB narrative output; rate-limit intake as detailed in the plans. Reject oversized media and return explicit unavailable narrative without truncating deterministic source evidence. This is not an open decision about audio duration or deletion timing.
 
 ## Planning Resolutions for Open Questions
 
-Question 1 remains a production gate: the speech provider is not selected, and no production language is enabled before exact-operation compatibility and human evaluation pass. Questions 2–4 are resolved as implementation defaults for this phase; they do not change the locked user decisions and remain visible in the plans for review.
+Q1 remains an external production gate: the speech provider is not selected, and neither production language is enabled before exact-operation compatibility and human evaluation pass. Q2–Q4 are resolved as implementation defaults for this phase; they do not change locked user decisions and remain visible in the plans for review.
 
 | Question | Phase 04 implementation resolution |
 |----------|------------------------------------|
