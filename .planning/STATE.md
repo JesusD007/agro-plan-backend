@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 4
 current_phase_name: Applied Farm Intelligence
 status: planning
-stopped_at: Phase 4 context gathered
-last_updated: "2026-11-11T11:28:01.749Z"
+stopped_at: Completed 04-01-PLAN.md
+last_updated: "2026-11-11T14:19:10.568Z"
 last_activity: 2026-11-10
 last_activity_desc: Phase 3 complete, transitioned to Phase 4
-state_head: c558e567866874d983b9c88ecb53defcbf46d66d
+state_head: 1e0f0cb84293f4e0a9f579ef677a237890c528e8
 progress:
   total_phases: 6
   completed_phases: 3
-  total_plans: 27
-  completed_plans: 27
+  total_plans: 31
+  completed_plans: 28
   percent: 50
 ---
 
@@ -23,14 +23,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-09)
 
 **Core value:** Producers can rely on secure, farm-scoped operational records and reviewable assistance from planting through harvest.
-**Current focus:** Phase 3 — Workforce and Offline Operations
+**Current focus:** Phase 4 — Applied Farm Intelligence
 
 ## Current Position
 
 Phase: 4 — Applied Farm Intelligence
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-11-10 — Phase 3 complete, transitioned to Phase 4
+Current Plan: 2
+Total Plans in Phase: 4
+Status: In progress
+Last activity: 2026-11-11 — Plan 04-01 implemented; 04-02 is next in wave 1
 
 Progress: ████████░░ [█████░░░░░] 50%
 
@@ -70,6 +71,7 @@ Progress: ████████░░ [█████░░░░░] 50%
 | Phase 03 P05 | 20m | 2 tasks | 13 files |
 | Phase 03 P06 | 30m | 3 tasks | 32 files |
 | Phase 03 P07 | 17min | 2 tasks | 5 files |
+| Phase 04-applied-farm-intelligence P01 | 45min | 2 tasks | 15 files |
 
 ## Accumulated Context
 
@@ -119,6 +121,9 @@ Progress: ████████░░ [█████░░░░░] 50%
 - [Phase 03]: A current farm owner or administrator must confirm task schedule revisions after checking source and task versions; notification and calendar events are durable outbox effects.
 - [Phase 03]: Calendar sync uses a provider-neutral adapter; until a provider is configured, delivery remains visibly retryable with per-event bounded retry status.
 - [Phase 03]: Use existing per-feature migrations when they cover all models and apply cleanly in PostgreSQL integration tests; avoid redundant consolidation migrations.
+- [Phase 04-applied-farm-intelligence]: Use a provider-neutral speech interface; keep production speech disabled until both Spanish and Creole gates pass.
+- [Phase 04-applied-farm-intelligence]: Require consent per recording and recheck membership, assignment, and consent before processing and publishing.
+- [Phase 04-applied-farm-intelligence]: Only authorized explicit confirmation appends the immutable logbook entry; delete media at confirmation or seven-day expiry.
 
 ### Pending Todos
 
@@ -137,6 +142,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-11T11:27:59.885Z
-Stopped at: Phase 4 context gathered
-Resume file: .planning/phases/04-applied-farm-intelligence/04-CONTEXT.md
+Last session: 2026-11-11T14:19:08.362Z
+Stopped at: Completed 04-01-PLAN.md
+Resume file: None
