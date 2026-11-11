@@ -10,7 +10,7 @@ Deliver AgroPlan's farm-scoped backend pilot first, then expand into farm operat
 
 - [x] **Phase 1: Farm Planning Pilot** - Producers can manage core farm data, review planting assistance, and keep a manual logbook. (completed 2026-11-10)
 - [x] **Phase 2: Farm Operations and Safety** - Producers can record and analyze operating costs, inputs, irrigation, harvest, calendars, and authorized advisory access. (completed 2026-11-10)
-- [ ] **Phase 3: Workforce and Offline Operations** - Workers and administrators can coordinate tasks, evidence, verification, and reliable offline synchronization.
+- [x] **Phase 3: Workforce and Offline Operations** - Workers and administrators can coordinate tasks, evidence, verification, and reliable offline synchronization. (completed 2026-11-10)
 - [ ] **Phase 4: Applied Farm Intelligence** - Producers can use voice drafts, weekly summaries, and future image-based agronomy reports with human review.
 - [ ] **Phase 5: Marketplace and Traceability** - Producers and buyers can transact lots and verify origin and operation history.
 - [ ] **Phase 6: Transport and Field-Service Integrations** - Sales can connect to freight workflows, and backend services support accessible, low-bandwidth client experiences.
@@ -70,7 +70,7 @@ Plans:
   2. Workers can access their task history and verified evidence; configured rewards and team progress reflect only verified work.
   3. A worker can record task changes offline and synchronize them later without duplicate effects; concurrent edits are surfaced as conflicts instead of silently overwriting either version.
   4. Confirmed field records update affected tasks and calendars with an explanation, while independent operations continue when unrelated dependencies fail.
-**Plans**: 7/7 plans executed
+**Plans**: 7/7 plans complete
 **Wave 1**
 - [x] 03-01-PLAN.md
 
@@ -126,7 +126,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. Farm Planning Pilot | 12/12 | Complete    | 2026-11-10 |
 | 2. Farm Operations and Safety | 8/8 | Complete    | 2026-11-10 |
-| 3. Workforce and Offline Operations | 7/7 | In Progress | - |
+| 3. Workforce and Offline Operations | 7/7 | Complete    | 2026-11-10 |
 | 4. Applied Farm Intelligence | 0/TBD | Not started | - |
 | 5. Marketplace and Traceability | 0/TBD | Not started | - |
 | 6. Transport and Field-Service Integrations | 0/TBD | Not started | - |
