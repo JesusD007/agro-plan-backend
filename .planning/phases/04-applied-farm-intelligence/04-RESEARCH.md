@@ -40,9 +40,9 @@ None — discussion stayed within Phase 4 scope.
 
 | ID | Description | Research Support |
 |----|-------------|------------------|
-| REQ-rf-g-39 | Transcribe producer/worker voice into editable activity draft; mark missing fields; confirm before logbook save; delete audio on confirmation or after seven days unreviewed. | Provider-neutral asynchronous pipeline, draft state, explicit confirmation, assignment/farm checks, private audio lifecycle and cleanup job. |
-| REQ-rf-g-40 | Draft a weekly summary from confirmed records, pending tasks and missing data; deterministic totals with source traceability; manager may review and authorize advisor sharing. | Farm-local week projection, existing report calculation pattern, bounded source-grounded prose generation, current grant revalidation for summary and sources. |
-| REQ-rf-g-43 | Prepare photo symptom report; diagnosis/treatment require agronomist confirmation. | Private image job, observation-only model contract, pending review state, explicit agronomist authorization and media deletion lifecycle. |
+| REQ-rf-g-39 | Transcribir voz del productor/trabajador y crear borrador editable de actividad, fecha, parcela, cultivo, cantidad y unidad; señalar campos faltantes. | Provider-neutral asynchronous pipeline, draft state, explicit confirmation, assignment/farm checks, private audio lifecycle and cleanup job. |
+| REQ-rf-g-40 | Redactar resumen semanal desde registros confirmados, tareas pendientes y datos faltantes; totales se calculan con datos estructurados y permiten consultar fuentes. | Farm-local week projection, existing report calculation pattern, bounded source-grounded prose generation, current grant revalidation for summary and sources. |
+| REQ-rf-g-43 | En fase futura, preparar reporte de síntomas por foto; agrónomo confirma diagnóstico y tratamiento. | Private image job, observation-only model contract, pending review state, explicit agronomist authorization and media deletion lifecycle. |
 </phase_requirements>
 
 ## Summary
