@@ -17,7 +17,7 @@ Deliver the three Phase 4 backend capabilities: voice-based editable activity dr
 - **D-01:** Support Dominican Spanish and Haitian Creole in the first voice-draft release.
 - **D-02:** Accept recordings up to five minutes. When transcription is uncertain, create a partial editable draft and mark uncertain or missing fields for correction rather than silently filling them.
 - **D-03:** Workers may create voice drafts only for tasks assigned to them; retain existing task and farm authorization checks.
-- **D-04:** A draft never creates a logbook record until the authorized user explicitly confirms it. Delete audio at confirmation or seven days after processing if unreviewed, as required by REQ-rf-g-39.
+- **D-04:** A draft never creates a logbook record until the authorized user explicitly confirms it. Delete audio at confirmation or seven days after processing if unreviewed, as required by REQ-rf-g-39. — **Reversibility:** one-way — once audio is deleted it cannot be recovered.
 
 ### Weekly summaries
 - **D-05:** Define a week as Monday through Sunday using the farm's configured time zone. Generate a summary only when requested by an owner/administrator, not as a scheduled automatic report.
@@ -27,7 +27,7 @@ Deliver the three Phase 4 backend capabilities: voice-based editable activity dr
 ### Photo symptom reports
 - **D-08:** Before agronomist review, AI may describe only visible signs and request additional photos; it must not give a diagnosis or treatment.
 - **D-09:** Only a verified agronomist explicitly assigned or authorized for the farm may confirm diagnosis or treatment. If evidence is insufficient, the agronomist requests more photos/data and the report remains pending.
-- **D-10:** Delete report photos when the review is closed or rejected, while retaining the report itself.
+- **D-10:** Delete report photos when the review is closed or rejected, while retaining the report itself. — **Reversibility:** one-way — deleted source photos cannot be restored.
 - **D-11:** Keep voice processing behind a provider-neutral contract. Validate language support and choose the transcription provider before enabling production, especially for Haitian Creole; Gemini's current language documentation did not verify Creole support.
 
 ### Prior decisions that remain binding
