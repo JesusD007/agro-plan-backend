@@ -64,6 +64,20 @@ public sealed class SymptomReportTests
         Assert.Null(Assert.Single(report.Photos).DeleteAfter);
     }
 
+    [Fact]
+    public void Observation_retry_limit_prevents_another_provider_attempt()
+    {
+        var report = CreateSubmittedReport();
+        var now = DateTimeOffset.UtcNow;
+
+        Assert.True(report.TryStartObservation(now, maximumAttempts: 1));
+        report.ReturnToPending(now.AddSeconds(1));
+
+        Assert.False(report.TryStartObservation(now.AddSeconds(2), maximumAttempts: 1));
+        Assert.Equal(1, report.ProcessingAttempts);
+        Assert.Equal(SymptomReportStatus.Pending, report.Status);
+    }
+
     private static SymptomReport CreateReport() => new(Guid.NewGuid(), Guid.NewGuid(), "owner", null, null, DateTimeOffset.UtcNow);
 
     private static SymptomReport CreateSubmittedReport()

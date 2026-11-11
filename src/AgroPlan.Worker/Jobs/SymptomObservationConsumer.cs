@@ -8,15 +8,18 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using RabbitMQ.Client.Events;
 
 namespace AgroPlan.Worker.Jobs;
 
 public sealed class SymptomObservationConsumer(RabbitMqConnection connection, IServiceScopeFactory scopeFactory,
-    IFileStorage storage, ISymptomObservationProvider provider, ILogger<SymptomObservationConsumer> logger) : BackgroundService
+    IFileStorage storage, ISymptomObservationProvider provider, ILogger<SymptomObservationConsumer> logger,
+    IOptions<SymptomObservationRetryOptions> retryOptions) : BackgroundService
 {
     public const string QueueName = "agroplan.symptom-observations.v1";
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private readonly int _maximumAttempts = ValidateMaximumAttempts(retryOptions.Value.MaxAttempts);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -42,8 +45,17 @@ public sealed class SymptomObservationConsumer(RabbitMqConnection connection, IS
                     catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { throw; }
                     catch (Exception exception)
                     {
-                        logger.LogWarning("Symptom observation failed ({ExceptionType}); broker will retry.", exception.GetType().Name);
-                        await channel.BasicNackAsync(delivery.DeliveryTag, false, true, stoppingToken);
+                        if (await RecoverFailedDeliveryAsync(delivery.Body.ToArray(), stoppingToken))
+                        {
+                            logger.LogError("Symptom observation reached its retry limit ({ExceptionType}); report remains pending for manual review.",
+                                exception.GetType().Name);
+                            await channel.BasicAckAsync(delivery.DeliveryTag, false, stoppingToken);
+                        }
+                        else
+                        {
+                            logger.LogWarning("Symptom observation failed ({ExceptionType}); broker will retry.", exception.GetType().Name);
+                            await channel.BasicNackAsync(delivery.DeliveryTag, false, true, stoppingToken);
+                        }
                     }
                 };
                 await channel.BasicConsumeAsync(QueueName, false, consumerTag: string.Empty, noLocal: false, exclusive: false,
@@ -67,6 +79,7 @@ public sealed class SymptomObservationConsumer(RabbitMqConnection connection, IS
 
         List<(Guid Id, string ObjectKey, string ContentType)> photos;
         int claimedVersion;
+        var requestAttempts = request.AttemptsAtRequest;
         await using (var scope = scopeFactory.CreateAsyncScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AgroPlanDbContext>();
@@ -78,14 +91,15 @@ public sealed class SymptomObservationConsumer(RabbitMqConnection connection, IS
             await db.Database.ExecuteSqlInterpolatedAsync(
                 $"SELECT \"Id\" FROM agro.symptom_reports WHERE \"FarmId\" = {request.FarmId} AND \"Id\" = {request.ReportId} FOR UPDATE", ct);
             var report = await db.Set<SymptomReport>().Include(x => x.Photos).SingleOrDefaultAsync(x =>
-                x.FarmId == request.FarmId && x.Id == request.ReportId &&
-                (x.Version == request.Version && x.Status == SymptomReportStatus.Pending ||
-                 x.Version == request.Version + 1 && x.Status == SymptomReportStatus.Processing), ct);
+                x.FarmId == request.FarmId && x.Id == request.ReportId, ct);
             if (report is null || !await HasActiveSubmitterAsync(db, report, ct)) return;
+            if (!IsCurrentObservationAttempt(report, request)) return;
+            var attemptsForEvent = report.ProcessingAttempts - requestAttempts;
+            if (attemptsForEvent >= _maximumAttempts) return;
             photos = report.Photos.Where(p => p.ConsentGranted && !p.ConsentRevokedAt.HasValue && p.FinalizedAt.HasValue &&
                 p.DeletedAt == null && p.ObjectKey != null).Select(p => (p.Id, p.ObjectKey!, p.ContentType)).ToList();
             if (photos.Count == 0) return;
-            if (!report.TryStartObservation(DateTimeOffset.UtcNow)) return;
+            if (!report.TryStartObservation(DateTimeOffset.UtcNow, requestAttempts + _maximumAttempts)) return;
             claimedVersion = report.Version;
             await db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
@@ -127,6 +141,7 @@ public sealed class SymptomObservationConsumer(RabbitMqConnection connection, IS
             catch
             {
                 await ReturnToPendingAsync(request, claimedVersion, ct);
+                if (await HasReachedRetryLimitAsync(request, ct)) return;
                 throw;
             }
         }
@@ -156,6 +171,63 @@ public sealed class SymptomObservationConsumer(RabbitMqConnection connection, IS
         }
     }
 
+    private async Task<bool> RecoverFailedDeliveryAsync(byte[] body, CancellationToken ct)
+    {
+        var request = JsonSerializer.Deserialize<SymptomObservationRequested>(body, JsonOptions);
+        if (request is null || request.EventId == Guid.Empty || request.FarmId == Guid.Empty || request.ReportId == Guid.Empty)
+            return true;
+
+        try
+        {
+            await using var scope = scopeFactory.CreateAsyncScope();
+            var db = scope.ServiceProvider.GetRequiredService<AgroPlanDbContext>();
+            await using var transaction = await db.Database.BeginTransactionAsync(ct);
+            await db.Database.ExecuteSqlInterpolatedAsync(
+                $"SELECT \"Id\" FROM agro.symptom_reports WHERE \"FarmId\" = {request.FarmId} AND \"Id\" = {request.ReportId} FOR UPDATE", ct);
+            var report = await db.Set<SymptomReport>().SingleOrDefaultAsync(x =>
+                x.FarmId == request.FarmId && x.Id == request.ReportId, ct);
+            if (report is null || !IsCurrentObservationAttempt(report, request)) return true;
+            if (report.Status == SymptomReportStatus.Processing)
+                report.ReturnToPending(DateTimeOffset.UtcNow);
+            var exhausted = report.ProcessingAttempts - request.AttemptsAtRequest >= _maximumAttempts;
+            await db.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
+            return exhausted;
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+        catch (Exception exception)
+        {
+            logger.LogWarning("Could not recover symptom observation state ({ExceptionType}); broker will retry.", exception.GetType().Name);
+            return false;
+        }
+    }
+
+    private async Task<bool> HasReachedRetryLimitAsync(SymptomObservationRequested request, CancellationToken ct)
+    {
+        await using var scope = scopeFactory.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AgroPlanDbContext>();
+        var attempts = await db.Set<SymptomReport>().AsNoTracking().Where(x =>
+            x.FarmId == request.FarmId && x.Id == request.ReportId).Select(x => (int?)x.ProcessingAttempts).SingleOrDefaultAsync(ct);
+        return attempts.HasValue && attempts.Value - request.AttemptsAtRequest >= _maximumAttempts;
+    }
+
+    private static bool IsCurrentObservationAttempt(SymptomReport report, SymptomObservationRequested request)
+    {
+        if (report.ObservedAt.HasValue || request.AttemptsAtRequest < 0 || request.Version > report.Version) return false;
+        var attemptsForEvent = report.ProcessingAttempts - request.AttemptsAtRequest;
+        if (attemptsForEvent < 0) return false;
+        var expectedDelta = (long)attemptsForEvent * 2;
+        if (report.Status == SymptomReportStatus.Pending)
+            return (long)report.Version == request.Version + expectedDelta;
+        return report.Status == SymptomReportStatus.Processing && attemptsForEvent > 0 &&
+               (long)report.Version == request.Version + expectedDelta - 1;
+    }
+
+    private static int ValidateMaximumAttempts(int value) =>
+        value is >= 1 and <= SymptomObservationRetryOptions.MaximumAllowedAttempts
+            ? value
+            : throw new InvalidOperationException($"Symptom observation MaxAttempts must be between 1 and {SymptomObservationRetryOptions.MaximumAllowedAttempts}.");
+
     private static Task<bool> HasActiveSubmitterAsync(AgroPlanDbContext db, SymptomReport report, CancellationToken ct) =>
         db.FarmMemberships.AsNoTracking().AnyAsync(x => x.FarmId == report.FarmId && x.UserId == report.SubmittedByUserId && x.IsActive, ct);
 
@@ -179,5 +251,6 @@ public sealed class SymptomObservationConsumer(RabbitMqConnection connection, IS
             p.ConsentGranted && !p.ConsentRevokedAt.HasValue && p.FinalizedAt.HasValue && p.DeletedAt == null);
     }
 
-    private sealed record SymptomObservationRequested(Guid EventId, Guid FarmId, Guid ReportId, int Version);
+    private sealed record SymptomObservationRequested(Guid EventId, Guid FarmId, Guid ReportId, int Version,
+        int AttemptsAtRequest = 0);
 }

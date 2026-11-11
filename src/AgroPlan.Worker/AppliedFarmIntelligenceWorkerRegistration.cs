@@ -28,6 +28,11 @@ public static class AppliedFarmIntelligenceWorkerRegistration
             typeof(UnconfiguredWeeklySummaryProvider));
         var hasSymptomProvider = HasExplicitProvider<ISymptomObservationProvider>(services,
             typeof(UnconfiguredSymptomObservationProvider));
+        services.Configure<SymptomObservationRetryOptions>(options =>
+        {
+            options.MaxAttempts = configuration.GetValue<int?>("AppliedFarmIntelligence:SymptomObservation:MaxAttempts") ??
+                                  SymptomObservationRetryOptions.DefaultMaximumAttempts;
+        });
 
         if (isDevelopmentOrTest)
         {

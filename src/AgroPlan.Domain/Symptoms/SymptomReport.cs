@@ -94,10 +94,18 @@ public sealed class SymptomReport
         Version++;
     }
 
-    public bool TryStartObservation(DateTimeOffset now)
+    public bool TryStartObservation(DateTimeOffset now, int maximumAttempts = int.MaxValue)
     {
+        if (maximumAttempts <= 0 || ProcessingAttempts >= maximumAttempts) return false;
         if (Status is not (SymptomReportStatus.Pending or SymptomReportStatus.Processing)) return false;
         if (ProcessingStartedAt.HasValue && ProcessingStartedAt.Value > now.AddMinutes(-15)) return false;
+        if (Status == SymptomReportStatus.Processing)
+        {
+            // A stale lease represents an abandoned attempt. Advance through the same
+            // version pair as an explicit return-to-pending before claiming the retry.
+            ProcessingStartedAt = null;
+            Version++;
+        }
         Status = SymptomReportStatus.Processing;
         ProcessingStartedAt = now;
         ProcessingAttempts++;

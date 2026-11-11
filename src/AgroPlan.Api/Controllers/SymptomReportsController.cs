@@ -116,7 +116,8 @@ public sealed class SymptomReportsController(AgroPlanDbContext db, IFileStorage 
             activation.IsEnabled(AppliedFarmIntelligenceOperation.SymptomObservation))
         {
             var id = Guid.NewGuid();
-            var payload = JsonSerializer.Serialize(new SymptomObservationRequested(id, farmId, report.Id, report.Version), JsonOptions);
+            var payload = JsonSerializer.Serialize(new SymptomObservationRequested(id, farmId, report.Id, report.Version,
+                report.ProcessingAttempts), JsonOptions);
             db.OutboxMessages.Add(new OutboxMessage(id, report.Id, "symptom-observation.requested", payload, now));
         }
         await db.SaveChangesAsync(ct);
@@ -180,7 +181,8 @@ public sealed record CreateSymptomUploadAuthorizationRequest(Guid? ReportId, Gui
     [param: Range(1, 10485760)] long SizeBytes, bool ExternalProcessingConsent, string? ConsentNoticeVersion, string? Notes);
 public sealed record SymptomUploadAuthorizationResponse(Guid ReportId, Guid PhotoId, string UploadUrl, DateTimeOffset ExpiresAt, string ContentType, long SizeBytes);
 public sealed record FinalizeSymptomReportRequest(Guid ReportId);
-public sealed record SymptomObservationRequested(Guid EventId, Guid FarmId, Guid ReportId, int Version);
+public sealed record SymptomObservationRequested(Guid EventId, Guid FarmId, Guid ReportId, int Version,
+    int AttemptsAtRequest = 0);
 public sealed record SymptomPhotoResponse(Guid Id, string ContentType, long? SizeBytes, bool ConsentedToAi, bool Deleted);
 public sealed record SymptomReportResponse(Guid Id, Guid FarmId, string Status, string? Notes, string? VisibleSigns, string? Uncertainty,
     bool? ImageSufficient, string[] RequestedEvidence, string? HumanDiagnosis, string? HumanTreatment, IReadOnlyList<SymptomPhotoResponse> Photos);
