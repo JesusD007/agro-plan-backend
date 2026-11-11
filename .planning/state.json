@@ -21,7 +21,7 @@
     {
       "number": "4",
       "name": "Applied Farm Intelligence",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "number": "5",
@@ -36,8 +36,8 @@
   ],
   "next": {
     "command": "$gsd-progress --next",
-    "label": "Advance to the next step (plan phase 4)",
-    "reason": "Phase 4 of 6 — needs a plan"
+    "label": "Advance to the next step",
+    "reason": "Phase 4 of 6 · 50% · executing"
   },
-  "updated_at": "2026-11-11T00:39:57.877Z"
+  "updated_at": "2026-11-11T15:24:52.765Z"
 }
