@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<testsuites tests="1" failures="1" errors="0" skipped="0">
+  <testsuite name="AgroPlan.IntegrationTests.Worker.AppliedFarmIntelligenceWorkerActivationTests" tests="1" failures="1" errors="0" skipped="0">
+    <testcase classname="AgroPlan.IntegrationTests.Worker.AppliedFarmIntelligenceWorkerActivationTests" name="Production_without_phase_four_providers_keeps_new_consumers_disabled_and_gemini_isolated" time="0">
+      <failure message="Converted from actual VSTest TRX outcome: Failed">Assert.NotNull() Failure: Value is null
+   at AgroPlan.IntegrationTests.Worker.AppliedFarmIntelligenceWorkerActivationTests.InvokeRegistration(IServiceCollection services, IConfiguration configuration, String environment) in C:\Users\romer\Lgsus\Proyecto Agro\agro-plan-backend\src\AgroPlan.IntegrationTests\Worker\AppliedFarmIntelligenceWorkerActivationTests.cs:line 36
+   at AgroPlan.IntegrationTests.Worker.AppliedFarmIntelligenceWorkerActivationTests.Production_without_phase_four_providers_keeps_new_consumers_disabled_and_gemini_isolated() in C:\Users\romer\Lgsus\Proyecto Agro\agro-plan-backend\src\AgroPlan.IntegrationTests\Worker\AppliedFarmIntelligenceWorkerActivationTests.cs:line 19
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)</failure>
+    </testcase>
+  </testsuite>
+</testsuites>
