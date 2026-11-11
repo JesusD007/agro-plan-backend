@@ -64,6 +64,8 @@ public sealed class SymptomReportsController(AgroPlanDbContext db, IFileStorage 
     {
         var actor = CurrentUserId();
         if (actor is null) return Unauthorized();
+        var role = await authorization.GetActiveRoleAsync(farmId, actor, ct);
+        if (role is not (FarmRole.Owner or FarmRole.Administrator or FarmRole.Worker)) return Forbid();
         var report = await db.Set<SymptomReport>().Include(x => x.Photos)
             .SingleOrDefaultAsync(x => x.FarmId == farmId && x.Id == request.ReportId, ct);
         if (report is null || report.SubmittedByUserId != actor) return NotFound();
@@ -90,8 +92,12 @@ public sealed class SymptomReportsController(AgroPlanDbContext db, IFileStorage 
                 return BadRequest(new { code = "SYMPTOM_PHOTO_FINALIZATION_FAILED" });
             photo.Finalize(finalized.ObjectKey, finalized.Metadata.SizeBytes, now);
         }
-        report.Submit(now);
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
+        // Membership can be revoked while private media is being finalized; re-read it
+        // inside the same transaction that changes the report and writes its outbox event.
+        role = await authorization.GetActiveRoleAsync(farmId, actor, ct);
+        if (role is not (FarmRole.Owner or FarmRole.Administrator or FarmRole.Worker)) return Forbid();
+        report.Submit(now);
         if (report.Photos.Any(x => x.ConsentGranted && !x.ConsentRevokedAt.HasValue) &&
             services.GetService<ISymptomObservationProvider>() is not null)
         {

@@ -98,6 +98,56 @@ public sealed class SymptomReportIntegrationTests(PostgreSqlFixture postgres)
     }
 
     [Fact]
+    public async Task Revoked_farm_member_cannot_finalize_symptom_report_or_emit_outbox()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        postgres.EnsureAvailable();
+        await using var factory = new ApiTestFactory(postgres.ConnectionString);
+        using var client = factory.CreateClient();
+        var ownerId = $"symptom-revoked-owner-{Guid.NewGuid():N}";
+        var workerId = $"symptom-revoked-worker-{Guid.NewGuid():N}";
+        Guid farmId;
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AgroPlan.Infrastructure.Persistence.AgroPlanDbContext>();
+            (farmId, _) = await TestData.SeedFarmAsync(db, ownerId, workerId);
+            db.FarmMemberships.Single(x => x.FarmId == farmId && x.UserId == workerId).SetRole(FarmRole.Worker);
+            await db.SaveChangesAsync(ct);
+        }
+
+        TestData.SetBearer(client, workerId);
+        using var upload = await client.PostAsJsonAsync($"/api/farms/{farmId}/symptom-reports/upload-authorizations", new
+        {
+            cropCycleId = (Guid?)null,
+            contentType = "image/png",
+            sizeBytes = 512L,
+            externalProcessingConsent = true,
+            consentNoticeVersion = "symptom-ai-v1"
+        }, ct);
+        Assert.Equal(HttpStatusCode.OK, upload.StatusCode);
+        using var uploadJson = JsonDocument.Parse(await upload.Content.ReadAsStringAsync(ct));
+        var reportId = uploadJson.RootElement.GetProperty("reportId").GetGuid();
+
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AgroPlan.Infrastructure.Persistence.AgroPlanDbContext>();
+            db.FarmMemberships.Single(x => x.FarmId == farmId && x.UserId == workerId).Revoke();
+            await db.SaveChangesAsync(ct);
+        }
+
+        using var finalize = await client.PostAsJsonAsync($"/api/farms/{farmId}/symptom-reports", new { reportId }, ct);
+        Assert.Equal(HttpStatusCode.Forbidden, finalize.StatusCode);
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AgroPlan.Infrastructure.Persistence.AgroPlanDbContext>();
+            var report = await db.Set<SymptomReport>().SingleAsync(x => x.Id == reportId, ct);
+            Assert.Equal(SymptomReportStatus.Uploading, report.Status);
+            Assert.False(await db.OutboxMessages.AnyAsync(x => x.AggregateId == reportId &&
+                x.EventType == "symptom-observation.requested", ct));
+        }
+    }
+
+    [Fact]
     public async Task Only_currently_verified_and_assigned_agronomist_can_review_and_read_private_photos()
     {
         var ct = TestContext.Current.CancellationToken;
