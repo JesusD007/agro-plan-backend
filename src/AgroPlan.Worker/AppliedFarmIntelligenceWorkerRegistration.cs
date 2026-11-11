@@ -37,11 +37,13 @@ public static class AppliedFarmIntelligenceWorkerRegistration
             hasSpeechProvider && HasService<IFileStorage>(services) && IsSpeechEvidenceApproved(configuration))
             services.TryAddEnumerable(ServiceDescriptor.Singleton<Microsoft.Extensions.Hosting.IHostedService, VoiceDraftConsumer>());
 
-        if (configuration.GetValue<bool>("AppliedFarmIntelligence:WeeklySummary:Enabled") && hasSummaryProvider)
+        if (configuration.GetValue<bool>("AppliedFarmIntelligence:WeeklySummary:Enabled") && hasSummaryProvider &&
+            IsOperationApproved(configuration, "WeeklySummary", "narrative"))
             services.TryAddEnumerable(ServiceDescriptor.Singleton<Microsoft.Extensions.Hosting.IHostedService, WeeklySummaryConsumer>());
 
         if (configuration.GetValue<bool>("AppliedFarmIntelligence:SymptomObservation:Enabled") &&
-            hasSymptomProvider && HasService<IFileStorage>(services))
+            hasSymptomProvider && HasService<IFileStorage>(services) &&
+            IsOperationApproved(configuration, "SymptomObservation", "observation"))
             services.TryAddEnumerable(ServiceDescriptor.Singleton<Microsoft.Extensions.Hosting.IHostedService, SymptomObservationConsumer>());
 
         return services;
@@ -67,6 +69,14 @@ public static class AppliedFarmIntelligenceWorkerRegistration
                section.GetValue<int>("CodeSwitchConsentedRecordingCount") >= 1 &&
                section.GetValue<double>("DominicanSpanishFieldExactAccuracy") >= 0.95 &&
                section.GetValue<double>("HaitianCreoleFieldExactAccuracy") >= 0.95;
+    }
+
+    private static bool IsOperationApproved(IConfiguration configuration, string feature, string operation)
+    {
+        var section = configuration.GetSection($"AppliedFarmIntelligence:{feature}");
+        return !string.IsNullOrWhiteSpace(section["Provider"]) &&
+               string.Equals(section["VerifiedOperation"], operation, StringComparison.Ordinal) &&
+               section.GetValue<bool>("EvidenceApproved");
     }
 
     private static bool HasExplicitProvider<TProvider>(IServiceCollection services, Type unconfiguredType)
