@@ -129,6 +129,19 @@ builder.Services.AddScoped<ConfirmProposal>();
 builder.Services.AddSingleton<IFileStorage, SupabaseFileStorage>();
 builder.Services.AddRateLimiter(options =>
 {
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("phase4-summary", httpContext =>
+    {
+        var userId = httpContext.User.FindFirstValue("sub") ?? httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "unknown-user";
+        var farmId = httpContext.Request.RouteValues["farmId"]?.ToString() ?? "unknown-farm";
+        return RateLimitPartition.GetFixedWindowLimiter($"{userId}:{farmId}", _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 20,
+            Window = TimeSpan.FromHours(1),
+            QueueLimit = 0,
+            AutoReplenishment = true
+        });
+    });
     options.AddPolicy("phase4-media", httpContext =>
     {
         var userId = httpContext.User.FindFirstValue("sub") ?? httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "unknown-user";
@@ -194,8 +207,8 @@ if (app.Environment.IsDevelopment())
 }
 if (!app.Environment.IsDevelopment()) app.UseHsts();
 app.UseHttpsRedirection();
-app.UseRateLimiter();
 app.UseAuthentication();
+app.UseRateLimiter();
 app.UseAuthorization();
 app.MapHealthChecks("/health");
 app.MapIdentityEndpoints();
