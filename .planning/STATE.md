@@ -3,17 +3,17 @@ gsd_state_version: "1.0"
 current_phase: 4
 current_phase_name: Applied Farm Intelligence
 current_plan: 4
-status: executing
-stopped_at: Completed 04-03-PLAN.md
-last_updated: "2026-11-11T16:16:48.275Z"
+status: verifying
+stopped_at: Completed 04-04-PLAN.md
+last_updated: "2026-11-11T16:43:03.326Z"
 last_activity: 2026-11-11
 last_activity_desc: Phase 3 complete, transitioned to Phase 4
-state_head: aadaf9a82ff702b81e6a3994de2efef9d1062072
+state_head: f64bafecce2f60e9498666d4721d5972e95919fd
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 31
-  completed_plans: 30
+  completed_plans: 31
   percent: 50
 ---
 
@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-11-09)
 Phase: 4 — Applied Farm Intelligence
 Current Plan: 4
 Total Plans in Phase: 4
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-11-11 — Plan 04-02 complete; 04-03 is ready to execute
 
 Progress: ████████░░ [█████░░░░░] 50%
@@ -75,6 +75,7 @@ Progress: ████████░░ [█████░░░░░] 50%
 | Phase 04-applied-farm-intelligence P01 | 45min | 2 tasks | 15 files |
 | Phase 04 P02 | 49m | 2 tasks | 13 files |
 | Phase 04 P03 | 38min | 2 tasks | 22 files |
+| Phase 04 P04 | 18min | 3 tasks | 15 files |
 
 ## Accumulated Context
 
@@ -132,6 +133,8 @@ Progress: ████████░░ [█████░░░░░] 50%
 - [Phase 04]: Advisor weekly summaries require a current Costs or Production grant; source rows are filtered and pending task details stay owner/admin-only.
 - [Phase 04]: Require explicit consent per photo before external observation; when provider is unconfigured, keep reports pending manually and do not enqueue AI jobs.
 - [Phase 04]: Only a pre-provisioned verified agronomist with current farm authorization can review; request-more-evidence preserves photos, while close/reject queues deletion.
+- [Phase 04]: Phase 4 AI workers require operation-specific provider approval and remain off by default.
+- [Phase 04]: Synthetic 45-case AI-SPEC fixtures are deterministic tests, not external provider accuracy evidence.
 
 ### Pending Todos
 
@@ -150,6 +153,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-11T16:16:46.061Z
-Stopped at: Completed 04-03-PLAN.md
+Last session: 2026-11-11T16:43:01.010Z
+Stopped at: Completed 04-04-PLAN.md
 Resume file: None
