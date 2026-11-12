@@ -28,7 +28,7 @@ public static class IdentityEndpoints
 
             var response = await CreateSessionAsync(user, users, tokens, sessions, cancellationToken);
             return Results.Json(response, statusCode: StatusCodes.Status201Created);
-        }).AllowAnonymous();
+        }).AllowAnonymous().Produces<SessionResponse>(StatusCodes.Status201Created);
 
         group.MapPost("/login", async (LoginRequest request, SignInManager<ApplicationUser> signIn, UserManager<ApplicationUser> users,
             TokenIssuer tokens, RefreshSessionService sessions, CancellationToken cancellationToken) =>
@@ -40,7 +40,7 @@ public static class IdentityEndpoints
             var result = await signIn.CheckPasswordSignInAsync(user, request.Password, lockoutOnFailure: true);
             if (!result.Succeeded) return Results.Unauthorized();
             return Results.Ok(await CreateSessionAsync(user, users, tokens, sessions, cancellationToken));
-        }).AllowAnonymous();
+        }).AllowAnonymous().Produces<SessionResponse>();
 
         group.MapPost("/refresh", async (RefreshRequest request, UserManager<ApplicationUser> users, TokenIssuer tokens,
             RefreshSessionService sessions, CancellationToken cancellationToken) =>
@@ -52,7 +52,7 @@ public static class IdentityEndpoints
             if (user is null) return Results.Unauthorized();
             var roles = await users.GetRolesAsync(user);
             return Results.Ok(new SessionResponse(tokens.Issue(user, DateTimeOffset.UtcNow, roles), rotation.Token, "Bearer", 900, rotation.ExpiresAt));
-        }).AllowAnonymous();
+        }).AllowAnonymous().Produces<SessionResponse>();
 
         group.MapPost("/logout", async (LogoutRequest request, ClaimsPrincipal principal, RefreshSessionService sessions,
             CancellationToken cancellationToken) =>

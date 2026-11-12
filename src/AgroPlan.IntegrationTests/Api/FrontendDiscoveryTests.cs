@@ -26,6 +26,9 @@ public sealed class FrontendDiscoveryTests(PostgreSqlFixture postgres)
         var email = $"verify-{Guid.NewGuid():N}@example.test";
         var registration = await client.PostAsJsonAsync("/api/identity/register", new { email, password = "LocalTest!A912345" }, TestContext.Current.CancellationToken);
         var session = await registration.Content.ReadFromJsonAsync<JsonElement>(TestContext.Current.CancellationToken);
+        var openApi = await client.GetFromJsonAsync<JsonElement>("/openapi/v1.json", TestContext.Current.CancellationToken);
+        Assert.True(openApi.GetProperty("components").GetProperty("schemas").GetProperty("SessionResponse")
+            .GetProperty("properties").TryGetProperty("refreshToken", out _));
         client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", session.GetProperty("accessToken").GetString());
         var sent = await client.PostAsync("/api/identity/email-verification", null, TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.Accepted, sent.StatusCode);
