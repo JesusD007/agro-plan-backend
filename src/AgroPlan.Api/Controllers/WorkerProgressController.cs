@@ -15,6 +15,19 @@ namespace AgroPlan.Api.Controllers;
 [Route("api/farms/{farmId:guid}/worker-progress")]
 public sealed class WorkerProgressController(AgroPlanDbContext db, AssignedWorkerAuthorizationService authorization) : ControllerBase
 {
+    [HttpGet("settings")]
+    public async Task<ActionResult<WorkerSettingsResponse>> Settings(Guid farmId, CancellationToken ct)
+    {
+        var requester = CurrentUserId();
+        if (requester is null) return Unauthorized();
+        var role = await authorization.GetActiveRoleAsync(farmId, requester, ct);
+        if (role is not (FarmRole.Owner or FarmRole.Administrator)) return Forbid();
+        var settings = await db.FarmWorkerSettings.AsNoTracking().SingleOrDefaultAsync(x => x.FarmId == farmId, ct)
+            ?? new FarmWorkerSettings(farmId);
+        return Ok(new WorkerSettingsResponse(settings.FarmId, settings.RankingsEnabled, settings.TimeZoneId,
+            settings.BadgeThresholdPoints, settings.TeamGoalTargetPoints, settings.RuleVersion));
+    }
+
     [HttpGet("{workerUserId}")]
     public async Task<IActionResult> Get(Guid farmId, string workerUserId, CancellationToken ct)
     {
@@ -114,3 +127,5 @@ public sealed record UpdateWorkerSettingsRequest(
     [Range(1, 10_000_000)] int TeamGoalTargetPoints);
 
 public sealed record WorkerRewardItem(Guid Id, string Kind, string RuleKey, int Points, string? Description, DateTimeOffset AwardedAt);
+public sealed record WorkerSettingsResponse(Guid FarmId, bool RankingsEnabled, string? TimeZoneId,
+    int BadgeThresholdPoints, int TeamGoalTargetPoints, int RuleVersion);

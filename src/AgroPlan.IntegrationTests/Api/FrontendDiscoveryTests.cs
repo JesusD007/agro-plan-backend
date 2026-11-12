@@ -74,6 +74,7 @@ public sealed class FrontendDiscoveryTests(PostgreSqlFixture postgres)
         Assert.Equal(farmId, farms[0].GetProperty("farmId").GetGuid());
         Assert.Equal("Worker", farms[0].GetProperty("role").GetString());
         Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync($"/api/farms/{farmId}/members", TestContext.Current.CancellationToken)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync($"/api/farms/{farmId}/worker-progress/settings", TestContext.Current.CancellationToken)).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync($"/api/farms/{farmId}/work-sync/conflicts", TestContext.Current.CancellationToken)).StatusCode);
         var task = await client.GetFromJsonAsync<JsonElement>($"/api/farms/{farmId}/work-tasks/{taskId}", TestContext.Current.CancellationToken);
         Assert.Equal(1, task.GetProperty("version").GetInt32());
@@ -92,6 +93,9 @@ public sealed class FrontendDiscoveryTests(PostgreSqlFixture postgres)
         TestData.SetBearer(client, owner);
         var members = await client.GetFromJsonAsync<JsonElement>($"/api/farms/{farmId}/members", TestContext.Current.CancellationToken);
         Assert.Equal(2, members.GetArrayLength());
+        var settings = await client.GetFromJsonAsync<JsonElement>($"/api/farms/{farmId}/worker-progress/settings", TestContext.Current.CancellationToken);
+        Assert.Equal(1000, settings.GetProperty("teamGoalTargetPoints").GetInt32());
+        Assert.Equal(JsonValueKind.Null, settings.GetProperty("timeZoneId").ValueKind);
         Assert.Equal(HttpStatusCode.OK, (await client.GetAsync($"/api/farms/{farmId}/workers/invitations", TestContext.Current.CancellationToken)).StatusCode);
         TestData.SetBearer(client, $"stranger-{Guid.NewGuid():N}");
         var none = await client.GetFromJsonAsync<JsonElement>("/api/farms/memberships", TestContext.Current.CancellationToken);
