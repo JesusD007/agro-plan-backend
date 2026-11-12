@@ -17,6 +17,32 @@ namespace AgroPlan.IntegrationTests.Api;
 public sealed class FrontendDiscoveryTests(PostgreSqlFixture postgres)
 {
     [Fact]
+    public async Task Financial_response_preserves_decimal_text_beyond_JavaScript_precision()
+    {
+        postgres.EnsureAvailable();
+        await using var factory = new ApiTestFactory(postgres.ConnectionString, disableBackgroundServices: true);
+        using var client = factory.CreateClient();
+        var owner = $"precision-{Guid.NewGuid():N}";
+        Guid farmId; Guid parcelId;
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AgroPlanDbContext>();
+            (farmId, parcelId) = await TestData.SeedFarmAsync(db, owner);
+        }
+        TestData.SetBearer(client, owner);
+        var written = await client.PostAsJsonAsync($"/api/farms/{farmId}/expenses", new
+        {
+            parcelId, cropCycleId = (Guid?)null, category = "Expense", occurredAt = DateTimeOffset.UtcNow,
+            description = "Exact decimal fixture", amount = "99999999999998.9999", currencyCode = "DOP", quantity = (decimal?)null, unit = (string?)null
+        }, TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.Created, written.StatusCode);
+        var response = await written.Content.ReadFromJsonAsync<JsonElement>(TestContext.Current.CancellationToken);
+        Assert.Equal("99999999999998.9999", response.GetProperty("amountExact").GetString());
+        var report = await client.GetFromJsonAsync<JsonElement>($"/api/farms/{farmId}/reports/costs", TestContext.Current.CancellationToken);
+        Assert.Equal("99999999999998.9999", report.GetProperty("currencyTotals")[0].GetProperty("amountExact").GetString());
+    }
+
+    [Fact]
     public async Task Confirmation_requires_a_token_for_the_current_account_and_delivers_only_by_email()
     {
         postgres.EnsureAvailable();

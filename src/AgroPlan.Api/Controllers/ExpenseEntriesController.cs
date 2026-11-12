@@ -91,4 +91,7 @@ public sealed record CorrectExpenseEntryRequest([param: Required, StringLength(1
 public sealed record ExpenseEntryResponse(Guid Id, Guid FarmId, Guid ParcelId, Guid? CropCycleId,
     OperationCostCategory Category, DateTimeOffset OccurredAt, string Description, decimal Amount,
     string CurrencyCode, decimal? Quantity, string? Unit, string ActorUserId, DateTimeOffset CreatedAt,
-    Guid? CorrectsEntryId, string? CorrectionReason);
+    Guid? CorrectsEntryId, string? CorrectionReason)
+{
+    public string AmountExact => Amount.ToString(System.Globalization.CultureInfo.InvariantCulture);
+}
