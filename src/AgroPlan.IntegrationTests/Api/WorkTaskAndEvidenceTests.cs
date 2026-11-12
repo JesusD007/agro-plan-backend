@@ -98,6 +98,14 @@ public sealed class WorkTaskAndEvidenceTests(PostgreSqlFixture database) : IAsyn
         Assert.Equal(HttpStatusCode.NotFound, (await _client.PostAsync($"/api/farms/{_farmId}/work-tasks/{taskId}/evidence/{submissionId}/finalize", null)).StatusCode);
         TestData.SetBearer(_client, _workerId);
         Assert.Equal(HttpStatusCode.OK, (await _client.PostAsync($"/api/farms/{_farmId}/work-tasks/{taskId}/evidence/{submissionId}/finalize", null)).StatusCode);
+        var downloadPath = $"/api/farms/{_farmId}/work-tasks/{taskId}/evidence/{submissionId}/download";
+        Assert.Equal(HttpStatusCode.OK, (await _client.GetAsync(downloadPath)).StatusCode);
+        TestData.SetBearer(_client, _otherWorkerId);
+        Assert.Equal(HttpStatusCode.NotFound, (await _client.GetAsync(downloadPath)).StatusCode);
+        TestData.SetBearer(_client, _ownerId);
+        var download = await _client.GetFromJsonAsync<System.Text.Json.JsonElement>(downloadPath);
+        Assert.StartsWith("https://", download.GetProperty("signedUrl").GetString());
+        TestData.SetBearer(_client, _workerId);
         Assert.Equal(HttpStatusCode.OK, (await _client.PostAsync($"/api/farms/{_farmId}/work-tasks/{taskId}/evidence/submit", null)).StatusCode);
 
         TestData.SetBearer(_client, _adminId);

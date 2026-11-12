@@ -146,6 +146,23 @@ public sealed class TaskEvidenceController(AgroPlanDbContext db, IFileStorage st
         return Ok(submissions);
     }
 
+    [HttpGet("{submissionId:guid}/download")]
+    public async Task<ActionResult<TaskEvidenceDownloadResponse>> Download(Guid farmId, Guid taskId, Guid submissionId, CancellationToken ct)
+    {
+        var userId = CurrentUserId();
+        if (userId is null) return Unauthorized();
+        var role = await authorization.GetActiveRoleAsync(farmId, userId, ct);
+        if (role is null) return Forbid();
+        if (role == AgroPlan.Domain.Farms.FarmRole.Worker &&
+            !await authorization.IsAssignedWorkerAsync(farmId, taskId, userId, ct)) return NotFound();
+        if (role is not (AgroPlan.Domain.Farms.FarmRole.Owner or AgroPlan.Domain.Farms.FarmRole.Administrator or AgroPlan.Domain.Farms.FarmRole.Worker)) return Forbid();
+        var submission = await db.TaskEvidenceSubmissions.AsNoTracking().SingleOrDefaultAsync(x =>
+            x.FarmId == farmId && x.WorkTaskId == taskId && x.Id == submissionId && x.FinalizedAt != null, ct);
+        if (submission?.ObjectKey is null) return NotFound();
+        var download = storage.CreateDownloadAuthorization(submission.ObjectKey, DateTimeOffset.UtcNow.AddMinutes(5));
+        return Ok(new TaskEvidenceDownloadResponse(download.UploadUrl, download.ExpiresAt));
+    }
+
     private string? CurrentUserId() => User.FindFirstValue("sub") ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
 }
 
@@ -163,3 +180,4 @@ public sealed record TaskEvidenceUploadResponse(Guid SubmissionId, int Revision,
 
 public sealed record TaskEvidenceResponse(Guid SubmissionId, int Revision, Guid? PreviousSubmissionId,
     string ContentType, long? SizeBytes, string? Location, DateTimeOffset? CapturedAt, DateTimeOffset? FinalizedAt);
+public sealed record TaskEvidenceDownloadResponse(string SignedUrl, DateTimeOffset ExpiresAt);
