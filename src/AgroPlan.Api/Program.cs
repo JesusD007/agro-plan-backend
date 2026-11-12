@@ -127,7 +127,11 @@ builder.Services.AddSingleton<IWorkRouteProvider, UnconfiguredWorkRouteProvider>
 builder.Services.AddSingleton<IExternalWorkCalendar, UnconfiguredWorkCalendar>();
 builder.Services.AddScoped<AgroPlan.Application.Planning.PlantingFrameCalculator>();
 builder.Services.AddScoped<ConfirmProposal>();
-builder.Services.AddSingleton<IFileStorage, SupabaseFileStorage>();
+builder.Services.AddSingleton<IFileStorage>(_ =>
+    !string.IsNullOrWhiteSpace(builder.Configuration["SUPABASE_STORAGE_BUCKET"] ?? builder.Configuration["Supabase:Storage:Bucket"]) &&
+    new[] { "S3_ACCESS_KEY_ID", "S3_SECRET_ACCESS_KEY", "S3_ENDPOINT", "S3_REGION" }.All(key => !string.IsNullOrWhiteSpace(builder.Configuration[key]))
+        ? new SupabaseFileStorage(builder.Configuration)
+        : new UnconfiguredFileStorage());
 builder.Services.AddSingleton<IAppliedFarmIntelligenceActivation>(
     new ConfigurationAppliedFarmIntelligenceActivation(builder.Configuration));
 builder.Services.AddRateLimiter(options =>
@@ -200,6 +204,16 @@ builder.Services.AddHostedService<TaskScheduleNotificationConsumer>();
 builder.Services.AddHealthChecks();
 
 var app = builder.Build();
+app.Use(async (context, next) =>
+{
+    try { await next(); }
+    catch (Exception exception) when (!context.Response.HasStarted && exception is StorageUnavailableException or EmailDeliveryNotConfiguredException)
+    {
+        context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+        await context.Response.WriteAsJsonAsync(new { type = "about:blank", title = exception is StorageUnavailableException
+            ? "Private file storage is not configured." : "Email delivery is not configured.", status = 503 }, context.RequestAborted);
+    }
+});
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();

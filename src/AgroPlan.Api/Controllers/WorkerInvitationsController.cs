@@ -27,6 +27,17 @@ public sealed class WorkerInvitationsController(
 {
     private static readonly TimeSpan InvitationLifetime = TimeSpan.FromDays(7);
 
+    [HttpGet("api/farms/{farmId:guid}/workers/invitations")]
+    public async Task<IActionResult> List(Guid farmId, CancellationToken ct)
+    {
+        var actor = CurrentUserId();
+        if (actor is null) return Unauthorized();
+        if (!await IsFarmManager(farmId, actor, ct)) return Forbid();
+        return Ok(await db.WorkerInvitations.AsNoTracking().Where(x => x.FarmId == farmId)
+            .OrderByDescending(x => x.IssuedAt).Take(100)
+            .Select(x => new { x.Id, x.Email, x.ExpiresAt, x.AcceptedAt, x.CancelledAt }).ToArrayAsync(ct));
+    }
+
     [HttpPost("api/farms/{farmId:guid}/workers/invitations")]
     public async Task<IActionResult> Create(Guid farmId, CreateWorkerInvitationRequest request, CancellationToken ct)
     {

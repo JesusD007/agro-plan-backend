@@ -17,6 +17,14 @@ public sealed class LogbookAttachmentsController(AgroPlanDbContext db, IFileStor
 {
     private static readonly HashSet<string> AllowedTypes = ["image/jpeg", "image/png", "image/webp"];
 
+    [HttpGet]
+    public async Task<IActionResult> List(Guid farmId, Guid entryId, CancellationToken ct)
+    {
+        if (!await db.LogbookEntries.AsNoTracking().AnyAsync(x => x.FarmId == farmId && x.Id == entryId, ct)) return NotFound();
+        return Ok(await db.LogbookAttachments.AsNoTracking().Where(x => x.FarmId == farmId && x.LogbookEntryId == entryId && x.FinalizedAt != null)
+            .OrderBy(x => x.CreatedAt).Select(x => new { attachmentId = x.Id, x.ContentType, x.SizeBytes, x.CreatedAt }).ToArrayAsync(ct));
+    }
+
     [HttpPost]
     public async Task<ActionResult<UploadAuthorizationResponse>> AuthorizeUpload(Guid farmId, Guid entryId, CreateAttachmentRequest request, CancellationToken ct)
     {

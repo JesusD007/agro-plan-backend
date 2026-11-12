@@ -105,7 +105,11 @@ public sealed class CropCalendarTests(PostgreSqlFixture postgres)
         {
             var db = scope.ServiceProvider.GetRequiredService<AgroPlanDbContext>();
             cycleA = Guid.NewGuid();
-            var crop = await db.CropCatalogEntries.SingleAsync(item => item.Code == "ARROZ", cancellationToken);
+            // Shared catalog codes may have templates from earlier tests. This fixture
+            // specifically requires a crop with no validated calendar evidence.
+            var crop = new CropCatalogEntry(Guid.NewGuid(), $"GAP-{Guid.NewGuid():N}", "Missing evidence fixture",
+                "Integration fixture", CropCatalogValidationStatus.IdentityOnly, null, null, null);
+            db.CropCatalogEntries.Add(crop);
             db.CropCycles.Add(new CropCycle(cycleA, farmA, parcelA, crop, null, null, null, DateTimeOffset.UtcNow));
             await db.SaveChangesAsync(cancellationToken);
         }

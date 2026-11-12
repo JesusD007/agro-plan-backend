@@ -121,7 +121,7 @@ public sealed class WorkTasksController(AgroPlanDbContext db, AssignedWorkerAuth
 
     private static WorkTaskResponse ToResponse(WorkTask task) => new(task.Id, task.FarmId, task.AssignedWorkerUserId,
         task.DueDate, task.Description, task.Status.ToString(), task.PhotoRequired, task.WageAmount, task.WageUnit,
-        task.ParcelId, task.CropCycleId, task.OperationKind, task.PointsForVerification, task.CompleteEvidenceBonusPoints);
+        task.ParcelId, task.CropCycleId, task.OperationKind, task.PointsForVerification, task.CompleteEvidenceBonusPoints, task.Version);
 }
 
 public sealed record CreateWorkTaskRequest(
@@ -141,4 +141,4 @@ public sealed record ReassignWorkTaskRequest([Required, StringLength(450)] strin
 
 public sealed record WorkTaskResponse(Guid Id, Guid FarmId, string AssignedWorkerUserId, DateOnly DueDate,
     string Description, string Status, bool PhotoRequired, decimal? WageAmount, string? WageUnit,
-    Guid? ParcelId, Guid? CropCycleId, string? OperationKind, int PointsForVerification, int CompleteEvidenceBonusPoints);
+    Guid? ParcelId, Guid? CropCycleId, string? OperationKind, int PointsForVerification, int CompleteEvidenceBonusPoints, int Version);

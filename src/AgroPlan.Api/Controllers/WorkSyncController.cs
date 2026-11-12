@@ -21,6 +21,21 @@ public sealed class WorkSyncController(AgroPlanDbContext db, AssignedWorkerAutho
     TaskEvidenceFinalizationService evidenceFinalization) : ControllerBase
 {
     private static readonly JsonSerializerOptions WebJson = new(JsonSerializerDefaults.Web);
+
+    [HttpGet("conflicts")]
+    public async Task<IActionResult> Conflicts(Guid farmId, CancellationToken ct)
+    {
+        var actor = CurrentUserId();
+        if (actor is null) return Unauthorized();
+        var role = await authorization.GetActiveRoleAsync(farmId, actor, ct);
+        if (role is not (FarmRole.Owner or FarmRole.Administrator)) return Forbid();
+        var conflicts = await db.TaskSyncConflicts.AsNoTracking().Where(x => x.FarmId == farmId &&
+            !db.TaskSyncConflictResolutions.Any(r => r.FarmId == farmId && r.ConflictId == x.Id))
+            .OrderBy(x => x.DetectedAt).Take(100).ToArrayAsync(ct);
+        return Ok(conflicts.Select(x => new { x.Id, x.WorkTaskId, x.WorkerUserId, x.BaseVersion,
+            x.ClientValuesJson, x.ServerVersion, x.ServerValuesJson, x.DetectedAt }));
+    }
+
     [HttpPost]
     public async Task<ActionResult<WorkSyncBatchResponse>> Sync(Guid farmId, WorkSyncBatchRequest request, CancellationToken ct)
     {
